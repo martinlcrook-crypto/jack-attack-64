@@ -644,8 +644,8 @@
         map: [
           '................',
           '..M..........M..',
-          '....===..===....',
           '................',
+          '....===..===....',
           '.......M........',
           '................',
           '.....B....B.....',
@@ -684,10 +684,10 @@
           '.......M........',
           '......===.......',
           '................',
-          '.M...B....B...M.',
+          '.M............M.',
           '.....B....B.....',
-          '..M..B....B..M..',
-          '.....B.J..B...M.',
+          '..M.BB....BB.M..',
+          '....BB.J..BB..M.',
           '################'
         ]
       },
@@ -772,9 +772,9 @@
           '..M....M.....M..',
           '..===......===..',
           '................',
-          '......====......',
+          '.....======.....',
           '................',
-          '..BB........BB..',
+          '................',
           '..BB...BB...BB..',
           '..BB.M.BB.M.BB..',
           '.JBB...BB...BBM.',
@@ -863,9 +863,9 @@
           '.==============.',
           '................',
           '..M...M..M...M..',
-          '................',
           '....===..===....',
           '................',
+          '......B..B......',
           '..M...B..B...M..',
           '.....JB..B..M.M.',
           '################'
@@ -900,7 +900,7 @@
           '................',
           '.....======.....',
           '....M......M....',
-          '..#..........#..',
+          '................',
           '..#..B....B..#..',
           '..#.MB....BM.#..',
           '.J#..#....#..#M.',
@@ -1237,10 +1237,10 @@
               y: r * TILE + 4,
               w: 26,
               h: 26,
-              vx: dir * (62 + cycle * 12),
+              vx: dir * (34 + cycle * 7),
               vy: 0,
               dir,
-              hopCooldown: 0.25 + (monId * 0.13) % 0.7,
+              hopCooldown: 0.65 + (monId * 0.19) % 0.9,
               alive: true,
               anim: monId * 0.7
             });
@@ -1264,10 +1264,10 @@
               y: TILE + 4,
               w: 26,
               h: 26,
-              vx: (i % 2 === 0 ? 1 : -1) * (72 + cycle * 12),
+              vx: (i % 2 === 0 ? 1 : -1) * (38 + cycle * 7),
               vy: 0,
               dir: i % 2 === 0 ? 1 : -1,
-              hopCooldown: 0.35 + i * 0.2,
+              hopCooldown: 0.75 + i * 0.25,
               alive: true,
               anim: i
             });
@@ -1647,8 +1647,8 @@
       }
 
       if (!pushed) {
-        const targetVx = moveDir * (input.grab ? 120 : 172);
-        const accel = j.onGround ? 1800 : 1150;
+        const targetVx = moveDir * (input.grab ? 120 : 182);
+        const accel = j.onGround ? 1900 : 1450;
         if (j.vx < targetVx) j.vx = Math.min(targetVx, j.vx + accel * dt);
         else if (j.vx > targetVx) j.vx = Math.max(targetVx, j.vx - accel * dt);
         if (moveDir !== 0) {
@@ -1661,7 +1661,7 @@
 
       // Coyote time + jump buffering
       if (j.onGround) {
-        j.coyote = 0.09;
+        j.coyote = 0.1;
         j.stompCombo = 0;
       } else {
         j.coyote = Math.max(0, j.coyote - dt);
@@ -1669,8 +1669,8 @@
 
       const jumpBuffered = (performance.now() - input.jumpPressedAt) < 120;
       if (jumpBuffered && j.coyote > 0) {
-        // Tuned so max jump height = ~3.2 tiles (102px) -> reliably clears 3 blocks!
-        j.vy = -465;
+        // Tuned so max jump height = ~3.6 tiles (116px) -> reliably clears 3 blocks & platforms!
+        j.vy = -505;
         j.onGround = false;
         j.coyote = 0;
         j.squash = 1;
@@ -1684,16 +1684,17 @@
       }
 
       // Gravity
-      j.vy = Math.min(540, j.vy + 1060 * dt);
+      j.vy = Math.min(540, j.vy + 1100 * dt);
 
       const solids = getSolidRects(false);
 
-      // Horizontal step & collision
+      // Horizontal step & collision (barriers don't block Jack sideways so jumping onto bars is smooth)
       j.x += j.vx * dt;
       if (j.x < 0) { j.x = 0; j.vx = 0; }
       if (j.x + j.w > CANVAS_W) { j.x = CANVAS_W - j.w; j.vx = 0; }
 
       for (const s of solids) {
+        if (s.tile === TILE_BARRIER) continue;
         if (rectOverlap(j.x, j.y, j.w, j.h, s.x, s.y, s.w, s.h)) {
           if (j.vx > 0) j.x = s.x - j.w;
           else if (j.vx < 0) j.x = s.x + s.w;
@@ -1701,7 +1702,7 @@
         }
       }
 
-      // Vertical step & collision
+      // Vertical step & collision (Jack can jump UP through barriers and land squarely on top!)
       const prevBottom = j.y + j.h;
       j.y += j.vy * dt;
       j.onGround = false;
@@ -1709,17 +1710,26 @@
       if (j.y < 0) { j.y = 0; j.vy = 0; }
 
       for (const s of solids) {
+        if (s.tile === TILE_BARRIER) {
+          // One-way platform for Jack: land on top when falling from above the bar surface
+          if (j.vy >= 0 && prevBottom <= s.y + 10 && rectOverlap(j.x, j.y, j.w, j.h, s.x, s.y, s.w, 16)) {
+            j.y = s.y - j.h;
+            if (j.vy > 220) j.squash = 0.7;
+            j.vy = 0;
+            j.onGround = true;
+            if (!state.barsDissolved) {
+              markBarrier(s.c, s.r);
+            }
+          }
+          continue;
+        }
+
         if (rectOverlap(j.x, j.y, j.w, j.h, s.x, s.y, s.w, s.h)) {
           if (j.vy > 0) {
             j.y = s.y - j.h;
             if (j.vy > 220) j.squash = 0.7;
             j.vy = 0;
             j.onGround = true;
-
-            // Mark barrier if standing on a barrier tile!
-            if (s.tile === TILE_BARRIER && !state.barsDissolved) {
-              markBarrier(s.c, s.r);
-            }
           } else if (j.vy < 0) {
             j.y = s.y + s.h;
             j.vy = 0;
@@ -1768,20 +1778,20 @@
     // =========================================================================
     function updateMonsters(dt) {
       const cycle = Math.floor((state.levelNum - 1) / BASE_LEVELS.length);
-      // Escalating aggression the longer Jack spends in the level (authentic C64!)
-      const anger = 1 + Math.min(1.15, state.levelElapsed / 75) + cycle * 0.16;
-      const solids = getSolidRects(true); // Monsters float safely on water!
+      // Calm, authentic C64 pace that gradually ramps if Jack lingers
+      const anger = 1 + Math.min(0.65, state.levelElapsed / 140) + cycle * 0.12;
+      const solids = getSolidRects(true); // Monsters float safely on water & stay blocked by barriers!
       const j = state.jack;
 
       for (const m of state.monsters) {
         if (!m.alive) continue;
-        m.anim += dt * (6 * anger);
+        m.anim += dt * (4.5 * anger);
 
-        // Gravity
-        m.vy = Math.min(460, m.vy + 940 * dt);
+        // Floatier, easier-to-read gravity for monsters
+        m.vy = Math.min(360, m.vy + 720 * dt);
 
-        // Horizontal movement
-        const desiredSpeed = (58 + cycle * 11) * anger;
+        // Slower, tactical horizontal speed
+        const desiredSpeed = (34 + cycle * 7) * anger;
         m.vx = m.dir * desiredSpeed;
         m.x += m.vx * dt;
 
@@ -1815,15 +1825,14 @@
           }
         }
 
-        // Unpredictable hopping & direction shifts (accelerates with anger!)
+        // Calmer rhythmic hopping & occasional direction shifts
         m.hopCooldown -= dt * anger;
         if (onSurface && m.hopCooldown <= 0) {
-          const hopStrength = 250 + Math.random() * 235; // hops arbitrarily low or high
+          const hopStrength = 215 + Math.random() * 185;
           m.vy = -hopStrength;
-          m.hopCooldown = 0.25 + Math.random() * 0.85;
-          // Occasionally shift direction, with slight bias toward Jack when angry
-          if (Math.random() < 0.25 + Math.min(0.35, state.levelElapsed / 140)) {
-            if (j.alive && Math.random() < 0.65) {
+          m.hopCooldown = 0.55 + Math.random() * 1.15;
+          if (Math.random() < 0.22 + Math.min(0.28, state.levelElapsed / 180)) {
+            if (j.alive && Math.random() < 0.6) {
               m.dir = (j.x > m.x) ? 1 : -1;
             } else {
               m.dir *= -1;
