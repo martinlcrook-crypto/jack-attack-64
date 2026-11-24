@@ -529,7 +529,7 @@
               <div style="margin-top:6px;"><strong>BLOCKS &amp; JUMPING:</strong></div>
               <div>&bull; Jack can jump up to <strong>3 blocks high</strong>.</div>
               <div>&bull; Hold <strong>GRAB</strong> (<kbd>Space</kbd>/<kbd>Shift</kbd>/<kbd>Z</kbd>) + <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> to <strong>push</strong> (1 or more blocks) or <strong>pull</strong> (1 block).</div>
-              <div>&bull; Watch out! A falling block will crush Jack too!</div>
+              <div>&bull; Watch out! Monsters &amp; falling blocks can only kill Jack from <strong>above</strong> (side &amp; underneath bumps are safe!).</div>
               <div style="margin-top:6px;"><strong class="accent-c">WATER &amp; BONUS BARS:</strong></div>
               <div>&bull; <strong>Monsters float, Jack doesn't!</strong> Push blocks into water to build safe bridges.</div>
               <div>&bull; Jump on every <strong>glowing bar</strong> before the bonus timer runs out for huge bonus points &mdash; bars dissolve when time hits zero!</div>
@@ -1831,20 +1831,50 @@
           }
         }
 
-        // Combat check against Jack
+        // Combat check against Jack (Authentic C64 rule: monsters can ONLY kill Jack from ABOVE!)
         if (j.alive && rectOverlap(j.x + 2, j.y + 2, j.w - 4, j.h - 4, m.x + 2, m.y + 2, m.w - 4, m.h - 4)) {
-          // Jack STOMPS monster if falling onto monster's upper body!
           const jackFeet = j.y + j.h;
-          const monMid = m.y + m.h * 0.58;
-          if (j.vy > 20 && jackFeet <= monMid + 8) {
+          const monFeet = m.y + m.h;
+          const horizOverlap = Math.min(j.x + j.w, m.x + m.w) - Math.max(j.x, m.x);
+
+          // 1) Jack STOMPS monster from above!
+          const jackFromAbove = j.vy > 20 && j.y < m.y - 2 && jackFeet <= m.y + m.h * 0.62 + 8;
+          // 2) Monster STOMPS Jack from above (must be falling onto Jack's head with real horizontal overlap)
+          const monFromAbove = m.vy > 20 && m.y < j.y - 4 && monFeet <= j.y + j.h * 0.55 + 6 && horizOverlap >= 9;
+
+          if (jackFromAbove) {
             j.stompCombo++;
             const pts = 150 * Math.min(4, j.stompCombo);
             killMonster(m, j.stompCombo > 1 ? `STOMP x${j.stompCombo}!` : 'STOMP!', pts, true);
             j.vy = input.jump ? -390 : -290;
             j.squash = 0.8;
+          } else if (monFromAbove) {
+            killJack('STOMPED FROM ABOVE!');
           } else {
-            // Monster hits/lands on Jack!
-            killJack('CAUGHT BY MONSTER!');
+            // Side contact OR monster bumping Jack from underneath -> SAFE!
+            if (m.y > j.y + j.h * 0.45 && m.vy < 0) {
+              // Monster hit Jack from underneath: bonk monster back downward
+              m.y = Math.min(ROWS * TILE - m.h, j.y + j.h);
+              m.vy = 70;
+            } else if (m.y < j.y - 4 && m.vy <= 20) {
+              // Jack jumped up under a rising/stationary monster: safe overhead bump
+              m.vy = Math.min(m.vy, -90);
+            } else {
+              // Side bump: reverse monster direction away from Jack without harming Jack
+              const pushDir = (m.x + m.w / 2 >= j.x + j.w / 2) ? 1 : -1;
+              m.dir = pushDir;
+              const nudgedX = pushDir > 0 ? j.x + j.w - 2 : j.x - m.w + 2;
+              if (nudgedX >= 1 && nudgedX + m.w <= CANVAS_W - 1) {
+                let blocked = false;
+                for (const s of solids) {
+                  if (rectOverlap(nudgedX, m.y, m.w, m.h, s.x, s.y, s.w, s.h)) {
+                    blocked = true;
+                    break;
+                  }
+                }
+                if (!blocked) m.x = nudgedX;
+              }
+            }
           }
         }
       }
