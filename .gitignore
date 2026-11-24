@@ -1,4 +1,6 @@
 android/build/
 android/*.keystore
 dist/*.idsig
+windows/assets/
+windows/*.syso
 .DS_Store

@@ -1,0 +1,24 @@
+1 ICON "assets/favicon.ico"
+
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName",      "Commodore 64 Tribute"
+      VALUE "FileDescription",  "Jack Attack 64 — Commodore 64 Arcade Puzzle Game"
+      VALUE "FileVersion",      "1.0.0.0"
+      VALUE "InternalName",     "jack-attack-64"
+      VALUE "OriginalFilename", "jack-attack-64.exe"
+      VALUE "ProductName",      "Jack Attack 64"
+      VALUE "ProductVersion",   "1.0.0.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 0x04B0
+  END
+END
