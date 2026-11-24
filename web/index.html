@@ -1,0 +1,2675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0c14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>JACK ATTACK — Commodore 64 Web &amp; Mobile Edition</title>
+  <meta name="description" content="A faithful, web-friendly and mobile-ready recreation of the 1983 Commodore 64 arcade puzzle classic Jack Attack." />
+  <style>
+    :root {
+      --bg-outer: #0d0e17;
+      --bezel: #1a1c2b;
+      --bezel-edge: #2c2f48;
+      --c64-blue: #40318d;
+      --c64-lblue: #7869c4;
+      --c64-red: #e04840;
+      --c64-cyan: #6abfc6;
+      --c64-yellow: #e5df78;
+      --c64-green: #69c96c;
+      --c64-orange: #d9823b;
+      --ink: #e8eaf6;
+      --muted: #8b90b2;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 20%, #191c30 0%, #0a0b12 85%);
+      color: var(--ink);
+      font-family: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 100dvh;
+      padding: env(safe-area-inset-top, 4px) env(safe-area-inset-right, 6px) env(safe-area-inset-bottom, 6px) env(safe-area-inset-left, 6px);
+      gap: 6px;
+    }
+
+    /* Top retro hardware strip */
+    .topbar {
+      width: 100%;
+      max-width: 820px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 10px;
+      background: linear-gradient(180deg, #222538 0%, #161826 100%);
+      border: 1px solid #2e324d;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .cbm-stripes {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      width: 18px;
+      flex-shrink: 0;
+    }
+    .cbm-stripes span {
+      display: block;
+      height: 3px;
+      border-radius: 1px;
+    }
+    .cbm-stripes span:nth-child(1) { background: #e04840; }
+    .cbm-stripes span:nth-child(2) { background: #d9823b; }
+    .cbm-stripes span:nth-child(3) { background: #e5df78; }
+    .cbm-stripes span:nth-child(4) { background: #69c96c; }
+    .cbm-stripes span:nth-child(5) { background: #6abfc6; }
+
+    .brand-title {
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .brand-sub {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--c64-cyan);
+      display: block;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .tb-btn {
+      appearance: none;
+      background: #252840;
+      color: #d6daf5;
+      border: 1px solid #393e60;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: transform 0.08s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+    .tb-btn:hover {
+      background: #303554;
+      border-color: #545b8a;
+    }
+    .tb-btn:active {
+      transform: translateY(1px);
+    }
+    .tb-btn.active {
+      background: #3b2f7d;
+      border-color: #7869c4;
+      color: #fff;
+    }
+
+    /* Main CRT Monitor Container */
+    .stage-wrap {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      max-width: 820px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .crt-bezel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      background: linear-gradient(160deg, #272a3e 0%, #141622 100%);
+      border: 2px solid #353955;
+      border-radius: 14px;
+      box-shadow:
+        0 14px 40px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 512 / 400;
+      height: 100%;
+    }
+
+    .screen-frame {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      border-radius: 7px;
+      overflow: hidden;
+      border: 2px solid #090a10;
+    }
+
+    canvas#gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #000;
+    }
+
+    .crt-overlay {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0) 0px,
+          rgba(0, 0, 0, 0) 2px,
+          rgba(0, 0, 0, 0.22) 3px,
+          rgba(0, 0, 0, 0.22) 4px
+        ),
+        radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 64%, rgba(0, 0, 0, 0.42) 100%);
+      opacity: 0.85;
+      transition: opacity 0.2s ease;
+    }
+    .crt-overlay.off {
+      opacity: 0;
+    }
+
+    /* Modal / Level Select Overlay inside Screen */
+    .overlay-panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 6, 14, 0.91);
+      padding: 16px;
+      z-index: 10;
+      text-align: center;
+      overflow-y: auto;
+    }
+    .overlay-panel.show {
+      display: flex;
+    }
+
+    .overlay-panel h2 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      letter-spacing: 0.14em;
+      color: var(--c64-yellow);
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(28px, 1fr));
+      gap: 5px;
+      width: 100%;
+      max-width: 420px;
+      margin: 8px 0 12px 0;
+    }
+
+    .lvl-cell {
+      appearance: none;
+      background: #1c2038;
+      color: #c7ceff;
+      border: 1px solid #3b4270;
+      border-radius: 5px;
+      padding: 6px 0;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .lvl-cell:hover {
+      background: #3d3385;
+      color: #fff;
+      border-color: var(--c64-cyan);
+    }
+    .lvl-cell.cleared {
+      background: #1d422d;
+      border-color: #5cab5e;
+      color: #a9f5aa;
+    }
+    .lvl-cell.current {
+      background: #8f2d28;
+      border-color: #ff8078;
+      color: #fff;
+    }
+
+    .help-box {
+      max-width: 440px;
+      text-align: left;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #d6daf5;
+      background: #141728;
+      border: 1px solid #353b61;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 6px 0 12px 0;
+    }
+    .help-box strong { color: var(--c64-yellow); }
+    .help-box .accent-r { color: #ff6e66; font-weight: 700; }
+    .help-box .accent-c { color: var(--c64-cyan); font-weight: 700; }
+
+    /* Bottom controls (Desktop hint OR Touch Gamepad) */
+    .controls-footer {
+      width: 100%;
+      max-width: 820px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kbd-hint {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(20, 22, 36, 0.8);
+      border: 1px solid #262a42;
+      border-radius: 8px;
+    }
+    .kbd-hint kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #272b45;
+      border: 1px solid #444a72;
+      color: #fff;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* Touch Arcade Pad */
+    .touch-pad {
+      display: none;
+      width: 100%;
+      padding: 4px 6px 2px 6px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .touch-pad.visible {
+      display: flex;
+    }
+
+    .dpad-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .pad-btn {
+      appearance: none;
+      border: 2px solid #454b75;
+      background: radial-gradient(circle at 35% 30%, #34395a 0%, #1d2036 85%);
+      color: #eef1ff;
+      font-family: inherit;
+      font-weight: 900;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 5px 0 #101220, 0 8px 18px rgba(0, 0, 0, 0.5);
+      transition: transform 0.05s ease, box-shadow 0.05s ease, filter 0.08s ease;
+      touch-action: none;
+      cursor: pointer;
+    }
+
+    .pad-dir {
+      width: 66px;
+      height: 60px;
+      border-radius: 14px;
+      font-size: 22px;
+    }
+
+    .pad-action {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+    }
+
+    .pad-jump {
+      border-color: #ff7c73;
+      background: radial-gradient(circle at 35% 30%, #e8554d 0%, #992620 85%);
+      color: #fff;
+      box-shadow: 0 5px 0 #57120e, 0 8px 18px rgba(224, 72, 64, 0.35);
+    }
+
+    .pad-grab {
+      border-color: #f3c86b;
+      background: radial-gradient(circle at 35% 30%, #d98d36 0%, #874e12 85%);
+      color: #fff;
+      box-shadow: 0 5px 0 #4d2906, 0 8px 18px rgba(217, 130, 59, 0.32);
+    }
+
+    .pad-btn.pressed {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #0c0e1a;
+      filter: brightness(1.22);
+    }
+
+    /* Landscape compact mode for phones */
+    @media (max-height: 500px) and (orientation: landscape) {
+      #app {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 6px;
+        padding: 4px 8px;
+      }
+      .topbar {
+        display: none;
+      }
+      .stage-wrap {
+        flex: 1 1 auto;
+        height: 100%;
+      }
+      .crt-bezel {
+        padding: 4px;
+        border-radius: 10px;
+      }
+      .controls-footer {
+        display: none;
+      }
+      .landscape-side-left, .landscape-side-right {
+        display: flex !important;
+      }
+    }
+
+    .landscape-side-left, .landscape-side-right {
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 8px;
+      width: 112px;
+      flex-shrink: 0;
+    }
+
+    .landscape-mini-bar {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: auto;
+    }
+
+    @media (max-width: 600px) {
+      .brand-sub { display: none; }
+      .brand-title { font-size: 12px; }
+      .tb-btn { padding: 4px 6px; font-size: 10px; }
+      .crt-bezel {
+        height: auto;
+        width: 100%;
+        padding: 5px;
+      }
+      .pad-dir { width: 62px; height: 56px; }
+      .pad-action { width: 64px; height: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Landscape-only Left Pad -->
+    <div class="landscape-side-left">
+      <div class="landscape-mini-bar">
+        <button class="tb-btn" data-action="levels">LVLS</button>
+        <button class="tb-btn" data-action="pause">II</button>
+      </div>
+      <div class="dpad-group" style="flex-direction: row; gap: 6px;">
+        <button class="pad-btn pad-dir" style="width:52px;height:54px;font-size:18px" data-key="left" aria-label="Left">&#9664;</button>
+        <button class="pad-btn pad-dir" style="width:52px;height:54px;font-size:18px" data-key="right" aria-label="Right">&#9654;</button>
+      </div>
+    </div>
+
+    <!-- Top Utility Bar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="cbm-stripes" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <span class="brand-title">JACK ATTACK</span>
+          <span class="brand-sub">C64 TRIBUTE &bull; 64 LEVELS</span>
+        </div>
+      </div>
+      <nav class="toolbar" aria-label="Game controls">
+        <button id="btnMode" class="tb-btn" title="Toggle 1 or 2 Players">1P</button>
+        <button id="btnLevels" class="tb-btn" title="Select starting level (1-64)">LEVELS</button>
+        <button id="btnHelp" class="tb-btn" title="How to play">HOW TO</button>
+        <button id="btnRestart" class="tb-btn" title="Restart current level (R)">RETRY</button>
+        <button id="btnPause" class="tb-btn" title="Pause game (P)">PAUSE</button>
+        <button id="btnSound" class="tb-btn active" title="Toggle SID Audio (M)">SFX ON</button>
+        <button id="btnCRT" class="tb-btn active" title="Toggle CRT Scanlines">CRT</button>
+        <button id="btnPad" class="tb-btn" title="Toggle On-Screen Touch Pad">PAD</button>
+      </nav>
+    </header>
+
+    <!-- Main CRT Screen -->
+    <main class="stage-wrap">
+      <div class="crt-bezel">
+        <div class="screen-frame">
+          <canvas id="gameCanvas" width="512" height="400"></canvas>
+          <div id="crtOverlay" class="crt-overlay"></div>
+
+          <!-- Level Select Overlay -->
+          <div id="levelOverlay" class="overlay-panel" role="dialog" aria-label="Select Level">
+            <h2>SELECT LEVEL (01 &ndash; 64)</h2>
+            <div style="font-size:11px;color:#8b90b2;margin-bottom:4px;">16 handcrafted C64 arenas + 4 speed cycles = 64 levels!</div>
+            <div id="levelGrid" class="level-grid"></div>
+            <button id="btnCloseLevels" class="tb-btn active" style="padding:7px 18px;font-size:12px;">BACK TO GAME</button>
+          </div>
+
+          <!-- How To Play Overlay -->
+          <div id="helpOverlay" class="overlay-panel" role="dialog" aria-label="How to Play">
+            <h2>HOW TO PLAY JACK ATTACK</h2>
+            <div class="help-box">
+              <div><strong class="accent-r">GOAL:</strong> Defeat every monster on screen to clear the level!</div>
+              <div style="margin-top:6px;"><strong>3 WAYS TO DEFEAT MONSTERS:</strong></div>
+              <div>1. <strong>STOMP</strong> them by jumping &amp; landing on their heads.</div>
+              <div>2. <strong>SQUISH</strong> them sideways by pushing a block against a wall, bar, or another block.</div>
+              <div>3. <strong>CRUSH</strong> them by dropping a block onto them from above!</div>
+              <div style="margin-top:6px;"><strong>BLOCKS &amp; JUMPING:</strong></div>
+              <div>&bull; Jack can jump up to <strong>3 blocks high</strong>.</div>
+              <div>&bull; Hold <strong>GRAB</strong> (<kbd>Space</kbd>/<kbd>Shift</kbd>/<kbd>Z</kbd>) + <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> to <strong>push</strong> (1 or more blocks) or <strong>pull</strong> (1 block).</div>
+              <div>&bull; Watch out! A falling block will crush Jack too!</div>
+              <div style="margin-top:6px;"><strong class="accent-c">WATER &amp; BONUS BARS:</strong></div>
+              <div>&bull; <strong>Monsters float, Jack doesn't!</strong> Push blocks into water to build safe bridges.</div>
+              <div>&bull; Jump on every <strong>glowing bar</strong> before the bonus timer runs out for huge bonus points &mdash; bars dissolve when time hits zero!</div>
+              <div>&bull; Extra life every <strong>20,000 points</strong>.</div>
+            </div>
+            <button id="btnCloseHelp" class="tb-btn active" style="padding:7px 18px;font-size:12px;">GOT IT!</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Controls (Portrait Touch Pad + Desktop Keyboard Legend) -->
+    <footer class="controls-footer">
+      <div id="touchPad" class="touch-pad" aria-label="Touch Arcade Controls">
+        <div class="dpad-group">
+          <button class="pad-btn pad-dir" data-key="left" aria-label="Move Left">&#9664;</button>
+          <button class="pad-btn pad-dir" data-key="right" aria-label="Move Right">&#9654;</button>
+        </div>
+        <div class="action-group">
+          <button class="pad-btn pad-action pad-grab" data-key="grab" aria-label="Grab Push or Pull Block">GRAB</button>
+          <button class="pad-btn pad-action pad-jump" data-key="jump" aria-label="Jump">JUMP</button>
+        </div>
+      </div>
+      <div id="kbdHint" class="kbd-hint">
+        <span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> / <kbd>A</kbd> <kbd>D</kbd> Move</span>
+        <span><kbd>&uarr;</kbd> / <kbd>W</kbd> / <kbd>X</kbd> Jump (3 blocks)</span>
+        <span><kbd>Space</kbd> / <kbd>Shift</kbd> / <kbd>Z</kbd> + Dir: Push/Pull Block</span>
+        <span><kbd>P</kbd> Pause &bull; <kbd>R</kbd> Retry &bull; <kbd>M</kbd> Mute</span>
+      </div>
+    </footer>
+
+    <!-- Landscape-only Right Pad -->
+    <div class="landscape-side-right">
+      <div class="landscape-mini-bar">
+        <button class="tb-btn" data-action="retry">R</button>
+        <button class="tb-btn" data-action="sound">SFX</button>
+      </div>
+      <div class="action-group" style="flex-direction: column; gap: 8px;">
+        <button class="pad-btn pad-action pad-jump" style="width:62px;height:62px;font-size:11px" data-key="jump" aria-label="Jump">JUMP</button>
+        <button class="pad-btn pad-action pad-grab" style="width:62px;height:62px;font-size:11px" data-key="grab" aria-label="Grab">GRAB</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // =========================================================================
+    // 1. CONSTANTS & COMMODORE 64 VIC-II PALETTE
+    // =========================================================================
+    const COLS = 16;
+    const ROWS = 11;
+    const TILE = 32;
+    const HUD_H = 48;
+    const CANVAS_W = COLS * TILE;      // 512
+    const CANVAS_H = HUD_H + ROWS * TILE; // 400
+
+    const TILE_EMPTY = 0;
+    const TILE_FLOOR = 1;
+    const TILE_WATER = 2;
+    const TILE_BARRIER = 3;
+
+    // Authentic Colodore-inspired C64 16-color palette
+    const C64 = {
+      BLACK: '#000000',
+      WHITE: '#ffffff',
+      RED: '#a83832',
+      JACK_RED: '#e5453c',
+      JACK_HI: '#ff8a80',
+      JACK_DARK: '#851f1a',
+      CYAN: '#66d3db',
+      CYAN_DARK: '#2d828c',
+      PURPLE: '#a852b5',
+      GREEN: '#58c45c',
+      BLUE: '#4337a6',
+      YELLOW: '#eae26d',
+      ORANGE: '#d97f36',
+      BROWN: '#78551f',
+      LRED: '#e07d75',
+      DGREY: '#585858',
+      MGREY: '#8a8a8a',
+      LGREEN: '#9ef29e',
+      LBLUE: '#8478e0',
+      LGREY: '#bababa'
+    };
+
+    // Per-level distinct VIC-II color themes (floor, block, barrier, monster)
+    const PALETTES = [
+      { floor: C64.BLUE,   floorHi: C64.LBLUE,  block: C64.ORANGE, blockHi: C64.YELLOW, bar: C64.GREEN,  barLit: C64.YELLOW, mon: C64.PURPLE, monHi: '#e396ee' },
+      { floor: C64.GREEN,  floorHi: C64.LGREEN, block: C64.LBLUE,  blockHi: C64.WHITE,  bar: C64.ORANGE, barLit: C64.YELLOW, mon: C64.YELLOW, monHi: C64.WHITE },
+      { floor: C64.PURPLE, floorHi: '#d88de3',  block: C64.GREEN,  blockHi: C64.LGREEN, bar: C64.CYAN,   barLit: C64.WHITE,  mon: C64.ORANGE, monHi: C64.YELLOW },
+      { floor: C64.BROWN,  floorHi: C64.ORANGE, block: C64.CYAN,   blockHi: C64.WHITE,  bar: C64.LRED,   barLit: C64.YELLOW, mon: C64.LGREEN, monHi: C64.WHITE },
+      { floor: C64.DGREY,  floorHi: C64.LGREY,  block: C64.PURPLE, blockHi: '#e396ee',  bar: C64.YELLOW, barLit: C64.WHITE,  mon: C64.CYAN,   monHi: C64.WHITE },
+      { floor: C64.BLUE,   floorHi: C64.CYAN,   block: C64.YELLOW, blockHi: C64.WHITE,  bar: C64.PURPLE, barLit: '#ffb8ff',  mon: C64.GREEN,  monHi: C64.LGREEN },
+      { floor: '#325a52',  floorHi: C64.CYAN,   block: C64.LRED,   blockHi: '#ffc2bc',  bar: C64.LGREEN, barLit: C64.WHITE,  mon: C64.LBLUE,  monHi: C64.WHITE },
+      { floor: '#5b2f45',  floorHi: C64.LRED,   block: C64.LGREEN, blockHi: C64.WHITE,  bar: C64.CYAN,   barLit: C64.YELLOW, mon: C64.YELLOW, monHi: C64.WHITE }
+    ];
+
+    // =========================================================================
+    // 2. 16 HANDCRAFTED LEVELS (CYCLED x4 = 64 CLASSIC LEVELS)
+    // Legend:
+    //   '.' empty   '#' floor/wall   '~' water   '=' barrier (bonus bar)
+    //   'B' movable block   'J' Jack spawn   'M' Monster spawn
+    // Exactly 16 columns x 11 rows per level.
+    // =========================================================================
+    const BASE_LEVELS = [
+      {
+        name: 'CUBIC CRITTERS',
+        bonus: 1000,
+        time: 75,
+        map: [
+          '................',
+          '..M..........M..',
+          '....===..===....',
+          '................',
+          '.......M........',
+          '................',
+          '.....B....B.....',
+          '..M..B....B..M..',
+          '....BB....BB....',
+          '....BB.J..BB....',
+          '################'
+        ]
+      },
+      {
+        name: 'MONSTERS FLOAT!',
+        bonus: 1200,
+        time: 80,
+        map: [
+          '................',
+          '..M....M.....M..',
+          '.....======.....',
+          '................',
+          '..==........==..',
+          '................',
+          '................',
+          '..BB........BB..',
+          '..BB..M..M..BB..',
+          '.JBB........BBM.',
+          '#####~~~~~~#####'
+        ]
+      },
+      {
+        name: 'THE CRUSHER',
+        bonus: 1400,
+        time: 80,
+        map: [
+          '................',
+          '..B.B......B.B..',
+          '..===......===..',
+          '.......M........',
+          '......===.......',
+          '................',
+          '.M...B....B...M.',
+          '.....B....B.....',
+          '..M..B....B..M..',
+          '.....B.J..B...M.',
+          '################'
+        ]
+      },
+      {
+        name: 'TWIN TOWERS',
+        bonus: 1500,
+        time: 85,
+        map: [
+          '................',
+          '..M..........M..',
+          '.===........===.',
+          '................',
+          '......====......',
+          '....B......B....',
+          '....#......#....',
+          '..M.#.M..M.#.M..',
+          '....#.B..B.#....',
+          '.J..#.B..B.#..M.',
+          '################'
+        ]
+      },
+      {
+        name: 'MOAT FORTRESS',
+        bonus: 1600,
+        time: 85,
+        map: [
+          '................',
+          '.M.....M......M.',
+          '....========....',
+          '................',
+          '.......BB.......',
+          '......====......',
+          '................',
+          '.....B....B.....',
+          '..M..BB..BB..M..',
+          '.....BBJ.BB..M..',
+          '~~~##########~~~'
+        ]
+      },
+      {
+        name: 'DOMINO DROP',
+        bonus: 1800,
+        time: 75,
+        map: [
+          '................',
+          '.B.B.B....B.B.B.',
+          '.=====....=====.',
+          '................',
+          '....M......M....',
+          '......====......',
+          '................',
+          '.M..B......B..M.',
+          '....B..MM..B....',
+          '....B..J...B..M.',
+          '################'
+        ]
+      },
+      {
+        name: 'STAIRWAY 64',
+        bonus: 1800,
+        time: 85,
+        map: [
+          '................',
+          '...........===..',
+          '.......M........',
+          '........===.....',
+          '....M...........',
+          '.....===........',
+          '..M.............',
+          '..===...BB..M...',
+          '.......BBB......',
+          '.J....BBBB..M.M.',
+          '################'
+        ]
+      },
+      {
+        name: 'FLOODED LABYRINTH',
+        bonus: 2000,
+        time: 90,
+        map: [
+          '................',
+          '..M....M.....M..',
+          '..===......===..',
+          '................',
+          '......====......',
+          '................',
+          '..BB........BB..',
+          '..BB...BB...BB..',
+          '..BB.M.BB.M.BB..',
+          '.JBB...BB...BBM.',
+          '####~~~##~~~####'
+        ]
+      },
+      {
+        name: 'CAGE MATCH',
+        bonus: 2000,
+        time: 85,
+        map: [
+          '................',
+          '..M..........M..',
+          '.====......====.',
+          '.B..M......M..B.',
+          '.====..BB..====.',
+          '.......BB.......',
+          '......====......',
+          '..B..........B..',
+          '..B..M....M..B..',
+          '..B....J.....BM.',
+          '################'
+        ]
+      },
+      {
+        name: 'SKYSCRAPER',
+        bonus: 2200,
+        time: 90,
+        map: [
+          '................',
+          '......====......',
+          '..M..........M..',
+          '...===....===...',
+          '................',
+          '.....B....B.....',
+          '..M..#....#..M..',
+          '.....#M..M#.....',
+          '..BB.#BBBB#.BB..',
+          '.JBB.#BBBB#.BBM.',
+          '################'
+        ]
+      },
+      {
+        name: 'PRESSURE CHAMBER',
+        bonus: 2200,
+        time: 80,
+        map: [
+          '................',
+          '....M......M....',
+          '..====....====..',
+          '................',
+          '.B..M..BB..M..B.',
+          '.==============.',
+          '................',
+          '.#..B..MM..B..#.',
+          '.#..B......B..#.',
+          '.#.JB..MM..B..#.',
+          '################'
+        ]
+      },
+      {
+        name: 'VENICE 64',
+        bonus: 2400,
+        time: 95,
+        map: [
+          '................',
+          '.M....M..M....M.',
+          '..===......===..',
+          '................',
+          '.....======.....',
+          '................',
+          '..B....M.M...B..',
+          '..B....BB....B..',
+          '..B..M.BB.M..B..',
+          '.JB....BB....B..',
+          '###~~######~~###'
+        ]
+      },
+      {
+        name: 'AVALANCHE',
+        bonus: 2500,
+        time: 70,
+        map: [
+          '................',
+          '.BBBBBBBBBBBBBB.',
+          '.==============.',
+          '................',
+          '..M...M..M...M..',
+          '................',
+          '....===..===....',
+          '................',
+          '..M...B..B...M..',
+          '.....JB..B..M.M.',
+          '################'
+        ]
+      },
+      {
+        name: 'THE GAUNTLET',
+        bonus: 2600,
+        time: 90,
+        map: [
+          '................',
+          '.M.....M......M.',
+          '..===..==..===..',
+          '................',
+          '....B......B....',
+          '...===....===...',
+          '..M..........M..',
+          '..BB..#..#..BB..',
+          '..BB..#MM#..BB..',
+          '.JBB..#..#..BBM.',
+          '#####~####~#####'
+        ]
+      },
+      {
+        name: 'TRAPDOOR CITADEL',
+        bonus: 2800,
+        time: 90,
+        map: [
+          '................',
+          '..B.B......B.B..',
+          '..===..MM..===..',
+          '................',
+          '.....======.....',
+          '....M......M....',
+          '..#..........#..',
+          '..#..B....B..#..',
+          '..#.MB....BM.#..',
+          '.J#..#....#..#M.',
+          '###~~~~~~~~~~###'
+        ]
+      },
+      {
+        name: "TRAMIEL'S REVENGE",
+        bonus: 3000,
+        time: 95,
+        map: [
+          '................',
+          '.M....B..B....M.',
+          '..===.====.===..',
+          '................',
+          '...M........M...',
+          '..====....====..',
+          '................',
+          '..BB..#BB#..BB..',
+          '..BB.M#BB#M.BB..',
+          '.JBB..#BB#..BBM.',
+          '####~~####~~####'
+        ]
+      }
+    ];
+
+    // =========================================================================
+    // 3. WEB AUDIO SID-STYLE 8-BIT SYNTHESIZER
+    // =========================================================================
+    class SidAudio {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      unlock() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) this.ctx = new AC();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      tone(freq, dur, type = 'square', vol = 0.11, delay = 0, slideTo = null) {
+        if (!this.enabled) return;
+        this.unlock();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        if (slideTo !== null) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), now + dur);
+        }
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(vol, now + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
+      }
+
+      noise(dur, vol = 0.09, delay = 0) {
+        if (!this.enabled) return;
+        this.unlock();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const len = Math.floor(this.ctx.sampleRate * dur);
+        const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(900, now);
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        src.start(now);
+      }
+
+      playJump() {
+        this.tone(210, 0.13, 'square', 0.09, 0, 560);
+      }
+      playPush() {
+        this.tone(130, 0.055, 'sawtooth', 0.07, 0, 95);
+        this.noise(0.04, 0.04, 0);
+      }
+      playBlockLand() {
+        this.tone(110, 0.09, 'triangle', 0.16, 0, 48);
+        this.noise(0.05, 0.06, 0);
+      }
+      playStomp(combo = 1) {
+        const base = 320 + Math.min(combo, 5) * 80;
+        this.tone(base, 0.08, 'square', 0.11, 0, base * 1.6);
+        this.tone(base * 1.5, 0.11, 'square', 0.09, 0.06, base * 2.1);
+      }
+      playSquish() {
+        this.tone(420, 0.07, 'sawtooth', 0.11, 0, 110);
+        this.tone(620, 0.12, 'square', 0.09, 0.05, 920);
+        this.noise(0.08, 0.07, 0);
+      }
+      playBarLit(count) {
+        const notes = [330, 392, 440, 494, 523, 587, 659, 784, 880, 1046];
+        const f = notes[Math.min(count - 1, notes.length - 1)];
+        this.tone(f, 0.09, 'triangle', 0.12, 0);
+      }
+      playAllBars() {
+        [523, 659, 784, 1046, 1318].forEach((n, i) => {
+          this.tone(n, 0.12, 'square', 0.10, i * 0.065);
+        });
+      }
+      playBarsDissolve() {
+        [740, 622, 523, 415, 311, 220].forEach((n, i) => {
+          this.tone(n, 0.07, 'sawtooth', 0.07, i * 0.04);
+        });
+      }
+      playSplash() {
+        this.noise(0.22, 0.13, 0);
+        this.tone(360, 0.22, 'triangle', 0.12, 0, 120);
+        this.tone(240, 0.18, 'sine', 0.10, 0.14, 90);
+      }
+      playDeath() {
+        [440, 392, 349, 311, 261, 196, 130].forEach((n, i) => {
+          this.tone(n, 0.10, 'sawtooth', 0.11, i * 0.075);
+        });
+      }
+      playExtraLife() {
+        [523, 659, 784, 1046, 784, 1046].forEach((n, i) => {
+          this.tone(n, 0.10, 'square', 0.11, i * 0.07);
+        });
+      }
+      playLevelClear() {
+        const mel = [392, 523, 659, 784, 659, 784, 1046];
+        mel.forEach((n, i) => {
+          this.tone(n, i === mel.length - 1 ? 0.32 : 0.09, 'square', 0.10, i * 0.08);
+        });
+      }
+      playStartJingle() {
+        const mel = [262, 330, 392, 523, 392, 523];
+        mel.forEach((n, i) => {
+          this.tone(n, 0.085, 'square', 0.09, i * 0.07);
+        });
+      }
+      playTick() {
+        this.tone(880, 0.03, 'square', 0.05, 0);
+      }
+    }
+
+    const audio = new SidAudio();
+
+    // =========================================================================
+    // 4. GAME STATE & INPUT
+    // =========================================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    const STORAGE_KEY = 'jack_attack_c64_save_v1';
+    let saveData = { highScore: 5000, cleared: {} };
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.highScore === 'number') saveData.highScore = Math.max(5000, parsed.highScore);
+        if (parsed.cleared && typeof parsed.cleared === 'object') saveData.cleared = parsed.cleared;
+      }
+    } catch (_) {}
+
+    function persistSave() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); } catch (_) {}
+    }
+
+    const input = {
+      left: false,
+      right: false,
+      jump: false,
+      grab: false,
+      jumpPressedAt: -999,
+      leftEdge: false,
+      rightEdge: false
+    };
+
+    const state = {
+      screen: 'TITLE', // TITLE | INTRO | PLAYING | LEVEL_CLEAR | PLAYER_DEAD | GAME_OVER | VICTORY
+      paused: false,
+      twoPlayer: false,
+      activePlayer: 0,
+      players: [
+        { score: 0, lives: 3, level: 1, nextLifeAt: 20000 },
+        { score: 0, lives: 3, level: 1, nextLifeAt: 20000 }
+      ],
+      selectedStartLevel: 1,
+      levelNum: 1,
+      levelName: '',
+      palette: PALETTES[0],
+      hasWater: false,
+      grid: [],           // ROWS x COLS tile types
+      barLit: [],         // ROWS x COLS booleans
+      totalBars: 0,
+      litBars: 0,
+      barBonus: 1000,
+      barBonusAwarded: false,
+      barsDissolved: false,
+      bonusTimer: 75,
+      maxBonusTimer: 75,
+      levelElapsed: 0,
+      stateTimer: 0,
+      shakeTimer: 0,
+      tickAnim: 0,
+      jack: null,
+      blocks: [],
+      monsters: [],
+      particles: [],
+      popups: []
+    };
+
+    function currentPlayer() {
+      return state.players[state.activePlayer];
+    }
+
+    function addScore(pts, x = null, y = null, label = null, color = C64.YELLOW) {
+      const p = currentPlayer();
+      p.score += pts;
+      if (p.score > saveData.highScore) {
+        saveData.highScore = p.score;
+        persistSave();
+      }
+      if (p.score >= p.nextLifeAt) {
+        p.lives = Math.min(9, p.lives + 1);
+        p.nextLifeAt += 20000;
+        audio.playExtraLife();
+        spawnPopup(CANVAS_W / 2, HUD_H + 64, '1UP EXTRA LIFE!', C64.LGREEN, 1.5);
+      }
+      if (x !== null && y !== null) {
+        spawnPopup(x, y, label || ('+' + pts), color, 0.95);
+      }
+    }
+
+    function spawnPopup(x, y, text, color = C64.YELLOW, life = 0.95) {
+      state.popups.push({ x, y, text, color, life, maxLife: life });
+    }
+
+    function spawnParticles(x, y, color, count = 12, speed = 130) {
+      for (let i = 0; i < count; i++) {
+        const ang = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+        const spd = speed * (0.4 + Math.random() * 0.8);
+        state.particles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd - 45,
+          size: 3 + Math.floor(Math.random() * 4),
+          color,
+          life: 0.35 + Math.random() * 0.35,
+          maxLife: 0.7
+        });
+      }
+    }
+
+    // =========================================================================
+    // 5. LEVEL LOADER (SUPPORTS LEVELS 1 - 64)
+    // =========================================================================
+    function loadLevel(lvlNum) {
+      const clamped = Math.max(1, Math.min(64, lvlNum));
+      state.levelNum = clamped;
+      const baseIdx = (clamped - 1) % BASE_LEVELS.length;
+      const cycle = Math.floor((clamped - 1) / BASE_LEVELS.length); // 0..3
+      const def = BASE_LEVELS[baseIdx];
+
+      state.levelName = cycle > 0 ? `${def.name} ${['', 'II', 'III', 'IV'][cycle]}` : def.name;
+      state.palette = PALETTES[(clamped - 1 + cycle * 3) % PALETTES.length];
+      state.grid = [];
+      state.barLit = [];
+      state.blocks = [];
+      state.monsters = [];
+      state.particles = [];
+      state.popups = [];
+      state.totalBars = 0;
+      state.litBars = 0;
+      state.barBonus = def.bonus + cycle * 500;
+      state.barBonusAwarded = false;
+      state.barsDissolved = false;
+      state.maxBonusTimer = Math.max(45, def.time - cycle * 8);
+      state.bonusTimer = state.maxBonusTimer;
+      state.levelElapsed = 0;
+      state.hasWater = false;
+
+      let jackCol = 7, jackRow = 9;
+      let blockId = 1;
+      let monId = 1;
+
+      for (let r = 0; r < ROWS; r++) {
+        const rowTiles = [];
+        const rowLit = [];
+        const line = def.map[r];
+        for (let c = 0; c < COLS; c++) {
+          const ch = line[c] || '.';
+          let tile = TILE_EMPTY;
+          if (ch === '#') tile = TILE_FLOOR;
+          else if (ch === '~') { tile = TILE_WATER; state.hasWater = true; }
+          else if (ch === '=') { tile = TILE_BARRIER; state.totalBars++; }
+          else if (ch === 'B') {
+            state.blocks.push({
+              id: blockId++,
+              x: c * TILE,
+              y: r * TILE,
+              col: c,
+              row: r,
+              vy: 0,
+              falling: false,
+              fallStartY: r * TILE,
+              sliding: false,
+              slideFromX: c * TILE,
+              slideToX: c * TILE,
+              slideT: 0,
+              submerged: false
+            });
+          } else if (ch === 'J') {
+            jackCol = c;
+            jackRow = r;
+          } else if (ch === 'M') {
+            const dir = (monId % 2 === 0) ? 1 : -1;
+            state.monsters.push({
+              id: monId++,
+              x: c * TILE + 3,
+              y: r * TILE + 4,
+              w: 26,
+              h: 26,
+              vx: dir * (62 + cycle * 12),
+              vy: 0,
+              dir,
+              hopCooldown: 0.25 + (monId * 0.13) % 0.7,
+              alive: true,
+              anim: monId * 0.7
+            });
+          }
+          rowTiles.push(tile);
+          rowLit.push(false);
+        }
+        state.grid.push(rowTiles);
+        state.barLit.push(rowLit);
+      }
+
+      // Add extra monsters on higher cycles if fewer than 8
+      if (cycle > 0 && state.monsters.length < 8) {
+        const need = Math.min(8 - state.monsters.length, cycle);
+        for (let i = 0; i < need; i++) {
+          const c = (i * 5 + 3) % (COLS - 2) + 1;
+          if (state.grid[1][c] === TILE_EMPTY && !blockAtGrid(c, 1)) {
+            state.monsters.push({
+              id: monId++,
+              x: c * TILE + 3,
+              y: TILE + 4,
+              w: 26,
+              h: 26,
+              vx: (i % 2 === 0 ? 1 : -1) * (72 + cycle * 12),
+              vy: 0,
+              dir: i % 2 === 0 ? 1 : -1,
+              hopCooldown: 0.35 + i * 0.2,
+              alive: true,
+              anim: i
+            });
+          }
+        }
+      }
+
+      state.jack = {
+        x: jackCol * TILE + 4,
+        y: jackRow * TILE + 4,
+        w: 24,
+        h: 28,
+        vx: 0,
+        vy: 0,
+        facing: 1,
+        onGround: false,
+        coyote: 0,
+        pushCooldown: 0,
+        stompCombo: 0,
+        alive: true,
+        drowned: false,
+        grabbing: false,
+        grabDir: 0,
+        walkAnim: 0,
+        squash: 0
+      };
+
+      state.screen = 'INTRO';
+      state.stateTimer = 1.65;
+    }
+
+    function startNewGame(startLevel = 1) {
+      audio.unlock();
+      audio.playStartJingle();
+      state.activePlayer = 0;
+      state.players = [
+        { score: 0, lives: 3, level: startLevel, nextLifeAt: 20000 },
+        { score: 0, lives: 3, level: startLevel, nextLifeAt: 20000 }
+      ];
+      state.paused = false;
+      loadLevel(startLevel);
+    }
+
+    // =========================================================================
+    // 6. COLLISION & GRID HELPERS
+    // =========================================================================
+    function isSolidTile(c, r) {
+      if (c < 0 || c >= COLS) return true;
+      if (r < 0) return true;
+      if (r >= ROWS) return true;
+      const t = state.grid[r][c];
+      return t === TILE_FLOOR || t === TILE_BARRIER;
+    }
+
+    function isWaterTile(c, r) {
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return false;
+      return state.grid[r][c] === TILE_WATER;
+    }
+
+    function blockAtGrid(c, r, ignoreId = -1) {
+      for (const b of state.blocks) {
+        if (b.id === ignoreId) continue;
+        const bc = Math.round(b.x / TILE);
+        const br = Math.round(b.y / TILE);
+        if (bc === c && br === r) return b;
+      }
+      return null;
+    }
+
+    function rectOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+      return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    }
+
+    function isCellBlockedForBlock(c, r, ignoreIds = []) {
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return true;
+      const t = state.grid[r][c];
+      if (t === TILE_FLOOR || t === TILE_BARRIER) return true;
+      for (const b of state.blocks) {
+        if (ignoreIds.includes(b.id)) continue;
+        const bx1 = b.x + 2, bx2 = b.x + TILE - 2;
+        const by1 = b.y + 2, by2 = b.y + TILE - 2;
+        if (rectOverlap(c * TILE + 2, r * TILE + 2, TILE - 4, TILE - 4, bx1, by1, bx2 - bx1, by2 - by1)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function getSolidRects(includeWaterAsSolid = false) {
+      const rects = [];
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = state.grid[r][c];
+          if (t === TILE_FLOOR || t === TILE_BARRIER || (includeWaterAsSolid && t === TILE_WATER)) {
+            rects.push({ x: c * TILE, y: r * TILE, w: TILE, h: TILE, tile: t, c, r });
+          }
+        }
+      }
+      for (const b of state.blocks) {
+        rects.push({ x: b.x, y: b.y, w: TILE, h: TILE, block: b });
+      }
+      return rects;
+    }
+
+    // =========================================================================
+    // 7. BLOCK PUSH / PULL & GRAVITY PHYSICS
+    // =========================================================================
+    function tryPushOrPull(dir) {
+      const j = state.jack;
+      if (!j.onGround || j.pushCooldown > 0) return false;
+
+      const jCenterX = j.x + j.w / 2;
+      const jRow = Math.floor((j.y + j.h - 4) / TILE);
+      const jCol = Math.floor(jCenterX / TILE);
+
+      // 1) Try PUSHING block(s) in `dir` (1 or more blocks in a row, authentic C64!)
+      const frontCol = jCol + dir;
+      const frontBlock = findBlockAtRowCol(frontCol, jRow);
+      if (frontBlock && !frontBlock.falling && !frontBlock.sliding && !frontBlock.submerged) {
+        // Check that Jack is actually close enough to the front block
+        const dist = dir > 0 ? (frontBlock.x - (j.x + j.w)) : (j.x - (frontBlock.x + TILE));
+        if (dist <= 9) {
+          // Gather chain of contiguous non-falling blocks in `dir`
+          const chain = [frontBlock];
+          let nextC = frontCol + dir;
+          while (nextC >= 0 && nextC < COLS) {
+            const nb = findBlockAtRowCol(nextC, jRow);
+            if (nb && !nb.falling && !nb.sliding && !nb.submerged) {
+              chain.push(nb);
+              nextC += dir;
+            } else {
+              break;
+            }
+          }
+          const destC = frontCol + chain.length * dir;
+          const chainIds = chain.map(b => b.id);
+          // Can we slide the entire chain into destC?
+          if (destC >= 0 && destC < COLS && !isCellBlockedForBlock(destC, jRow, chainIds)) {
+            // Check monsters in destC: squish if behind destC is blocked, else nudge!
+            const destX = destC * TILE;
+            const destY = jRow * TILE;
+            const behindBlocked = isCellBlockedForBlock(destC + dir, jRow, chainIds);
+
+            for (const m of state.monsters) {
+              if (!m.alive) continue;
+              if (rectOverlap(destX, destY, TILE, TILE, m.x, m.y, m.w, m.h)) {
+                if (behindBlocked) {
+                  killMonster(m, 'SQUISH!', 250);
+                } else {
+                  m.x = (destC + dir) * TILE + 3;
+                  m.vx = dir * Math.abs(m.vx);
+                  m.dir = dir;
+                }
+              }
+            }
+
+            // Slide all blocks in chain
+            for (const b of chain) {
+              b.sliding = true;
+              b.slideFromX = b.x;
+              b.slideToX = b.x + dir * TILE;
+              b.slideT = 0;
+              b.col = Math.round(b.slideToX / TILE);
+            }
+            j.x += dir * 8;
+            j.facing = dir;
+            j.grabbing = true;
+            j.grabDir = dir;
+            j.pushCooldown = 0.145;
+            audio.playPush();
+            if (!state.barsDissolved && state.bonusTimer > 0) {
+              addScore(10);
+            }
+            return true;
+          } else {
+            // Even if chain is blocked by wall/block, check if a monster is squeezed right in between Jack's pushed block & wall!
+            const sqX = frontBlock.x + dir * TILE;
+            for (const m of state.monsters) {
+              if (!m.alive) continue;
+              if (rectOverlap(sqX - 4, jRow * TILE, TILE + 8, TILE, m.x, m.y, m.w, m.h)) {
+                killMonster(m, 'SQUISH!', 250);
+              }
+            }
+          }
+        }
+      }
+
+      // 2) Try PULLING (trailing) ONE block directly behind Jack (authentic C64!)
+      const backCol = jCol - dir;
+      const backBlock = findBlockAtRowCol(backCol, jRow);
+      if (backBlock && !backBlock.falling && !backBlock.sliding && !backBlock.submerged) {
+        const distBack = dir > 0 ? (j.x - (backBlock.x + TILE)) : (backBlock.x - (j.x + j.w));
+        const jackNextCol = jCol + dir;
+        if (distBack <= 11 && jackNextCol >= 0 && jackNextCol < COLS && !isCellBlockedForBlock(jackNextCol, jRow, [backBlock.id])) {
+          // Ensure Jack won't step straight into a monster when pulling
+          backBlock.sliding = true;
+          backBlock.slideFromX = backBlock.x;
+          backBlock.slideToX = jCol * TILE;
+          backBlock.slideT = 0;
+          backBlock.col = jCol;
+
+          // Move Jack smoothly into jackNextCol
+          j.x = jackNextCol * TILE + (TILE - j.w) / 2;
+          j.facing = -dir;
+          j.grabbing = true;
+          j.grabDir = -dir;
+          j.pushCooldown = 0.16;
+          audio.playPush();
+          if (!state.barsDissolved && state.bonusTimer > 0) {
+            addScore(10);
+          }
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    function findBlockAtRowCol(c, r) {
+      for (const b of state.blocks) {
+        const bc = Math.round(b.x / TILE);
+        const br = Math.round(b.y / TILE);
+        if (bc === c && br === r) return b;
+      }
+      return null;
+    }
+
+    function updateBlocks(dt) {
+      // Sort blocks bottom-up so stacked blocks fall cleanly in sync
+      const sorted = [...state.blocks].sort((a, b) => b.y - a.y);
+
+      for (const b of sorted) {
+        if (b.sliding) {
+          b.slideT += dt / 0.115;
+          if (b.slideT >= 1) {
+            b.x = b.slideToX;
+            b.sliding = false;
+            b.col = Math.round(b.x / TILE);
+          } else {
+            b.x = b.slideFromX + (b.slideToX - b.slideFromX) * b.slideT;
+          }
+          // Check horizontal squish during slide
+          const slideDir = Math.sign(b.slideToX - b.slideFromX);
+          for (const m of state.monsters) {
+            if (!m.alive) continue;
+            if (rectOverlap(b.x + 2, b.y + 4, TILE - 4, TILE - 8, m.x, m.y, m.w, m.h)) {
+              const aheadCol = Math.round(b.slideToX / TILE) + slideDir;
+              if (isCellBlockedForBlock(aheadCol, Math.round(b.y / TILE), [b.id])) {
+                killMonster(m, 'SQUISH!', 250);
+              } else {
+                m.x = slideDir > 0 ? b.x + TILE + 1 : b.x - m.w - 1;
+              }
+            }
+          }
+          continue;
+        }
+
+        // Check support underneath block
+        const c = Math.round(b.x / TILE);
+        const nextRow = Math.floor((b.y + TILE + 1) / TILE);
+        let supported = false;
+
+        if (nextRow >= ROWS) {
+          supported = true;
+        } else {
+          const tileBelow = state.grid[nextRow][c];
+          if (tileBelow === TILE_FLOOR || tileBelow === TILE_BARRIER) {
+            supported = true;
+          } else {
+            // Check another block directly underneath
+            for (const other of state.blocks) {
+              if (other.id === b.id) continue;
+              if (Math.abs(other.x - b.x) < TILE * 0.6) {
+                const gap = other.y - (b.y + TILE);
+                if (gap >= -2 && gap <= 2 && !other.falling) {
+                  supported = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        if (!supported) {
+          if (!b.falling) {
+            b.falling = true;
+            b.fallStartY = b.y;
+            b.vy = 60;
+          }
+          b.vy = Math.min(440, b.vy + 1100 * dt);
+          const nextY = b.y + b.vy * dt;
+
+          // Find landing Y (floor, barrier, or another block)
+          let landY = (ROWS - 1) * TILE;
+          const bottomRow = Math.floor((nextY + TILE) / TILE);
+
+          // Check solid tiles below
+          for (let r = Math.max(0, Math.floor(b.y / TILE) + 1); r < ROWS; r++) {
+            const t = state.grid[r][c];
+            if (t === TILE_FLOOR || t === TILE_BARRIER) {
+              landY = Math.min(landY, (r - 1) * TILE);
+              break;
+            }
+          }
+
+          // Check blocks below
+          for (const other of state.blocks) {
+            if (other.id === b.id) continue;
+            if (Math.abs(other.x - b.x) < TILE * 0.65 && other.y > b.y) {
+              landY = Math.min(landY, other.y - TILE);
+            }
+          }
+
+          b.y = nextY;
+
+          // Falling block crushes monsters underneath!
+          for (const m of state.monsters) {
+            if (!m.alive) continue;
+            if (rectOverlap(b.x + 2, b.y + 8, TILE - 4, TILE - 6, m.x + 2, m.y + 2, m.w - 4, m.h - 4)) {
+              killMonster(m, 'CRUSH!', 300);
+            }
+          }
+
+          // Falling block crushes Jack if falling genuinely from above his head!
+          const j = state.jack;
+          if (j.alive && (b.y - b.fallStartY) > 6) {
+            const jackTop = j.y + 4;
+            const blockBottom = b.y + TILE;
+            if (blockBottom > jackTop && b.y < j.y + j.h - 10 &&
+                j.x + j.w - 5 > b.x && j.x + 5 < b.x + TILE) {
+              killJack('CRUSHED BY BLOCK!');
+            }
+          }
+
+          if (b.y >= landY) {
+            b.y = landY;
+            b.vy = 0;
+            b.falling = false;
+            b.row = Math.round(b.y / TILE);
+            b.col = c;
+            // If block fell into a water tile, it forms a sturdy bridge!
+            if (state.grid[b.row] && state.grid[b.row][c] === TILE_WATER) {
+              b.submerged = true;
+              audio.playSplash();
+              spawnParticles(b.x + TILE / 2, b.y + 6, C64.CYAN, 10, 90);
+            } else {
+              audio.playBlockLand();
+              state.shakeTimer = Math.max(state.shakeTimer, 0.08);
+            }
+          }
+        } else {
+          b.falling = false;
+          b.vy = 0;
+          b.row = Math.round(b.y / TILE);
+          b.col = c;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 8. JACK MOVEMENT & INTERACTIONS
+    // =========================================================================
+    function updateJack(dt) {
+      const j = state.jack;
+      if (!j.alive) return;
+
+      if (j.pushCooldown > 0) j.pushCooldown -= dt;
+      if (j.squash > 0) j.squash = Math.max(0, j.squash - dt * 5);
+
+      const moveDir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      j.grabbing = input.grab;
+
+      // Push / Pull when holding GRAB + direction
+      let pushed = false;
+      if (input.grab && moveDir !== 0 && j.onGround) {
+        pushed = tryPushOrPull(moveDir);
+      }
+
+      if (!pushed) {
+        const targetVx = moveDir * (input.grab ? 120 : 172);
+        const accel = j.onGround ? 1800 : 1150;
+        if (j.vx < targetVx) j.vx = Math.min(targetVx, j.vx + accel * dt);
+        else if (j.vx > targetVx) j.vx = Math.max(targetVx, j.vx - accel * dt);
+        if (moveDir !== 0) {
+          j.facing = moveDir;
+          j.walkAnim += dt * 11;
+        }
+      } else {
+        j.vx = 0;
+      }
+
+      // Coyote time + jump buffering
+      if (j.onGround) {
+        j.coyote = 0.09;
+        j.stompCombo = 0;
+      } else {
+        j.coyote = Math.max(0, j.coyote - dt);
+      }
+
+      const jumpBuffered = (performance.now() - input.jumpPressedAt) < 120;
+      if (jumpBuffered && j.coyote > 0) {
+        // Tuned so max jump height = ~3.2 tiles (102px) -> reliably clears 3 blocks!
+        j.vy = -465;
+        j.onGround = false;
+        j.coyote = 0;
+        j.squash = 1;
+        input.jumpPressedAt = -999;
+        audio.playJump();
+      }
+
+      // Variable jump height when releasing jump early
+      if (!input.jump && j.vy < -180) {
+        j.vy += 1100 * dt;
+      }
+
+      // Gravity
+      j.vy = Math.min(540, j.vy + 1060 * dt);
+
+      const solids = getSolidRects(false);
+
+      // Horizontal step & collision
+      j.x += j.vx * dt;
+      if (j.x < 0) { j.x = 0; j.vx = 0; }
+      if (j.x + j.w > CANVAS_W) { j.x = CANVAS_W - j.w; j.vx = 0; }
+
+      for (const s of solids) {
+        if (rectOverlap(j.x, j.y, j.w, j.h, s.x, s.y, s.w, s.h)) {
+          if (j.vx > 0) j.x = s.x - j.w;
+          else if (j.vx < 0) j.x = s.x + s.w;
+          j.vx = 0;
+        }
+      }
+
+      // Vertical step & collision
+      const prevBottom = j.y + j.h;
+      j.y += j.vy * dt;
+      j.onGround = false;
+
+      if (j.y < 0) { j.y = 0; j.vy = 0; }
+
+      for (const s of solids) {
+        if (rectOverlap(j.x, j.y, j.w, j.h, s.x, s.y, s.w, s.h)) {
+          if (j.vy > 0) {
+            j.y = s.y - j.h;
+            if (j.vy > 220) j.squash = 0.7;
+            j.vy = 0;
+            j.onGround = true;
+
+            // Mark barrier if standing on a barrier tile!
+            if (s.tile === TILE_BARRIER && !state.barsDissolved) {
+              markBarrier(s.c, s.r);
+            }
+          } else if (j.vy < 0) {
+            j.y = s.y + s.h;
+            j.vy = 0;
+          }
+        }
+      }
+
+      // Check water hazard! (Monsters float, Jack doesn't!)
+      const footColL = Math.floor((j.x + 6) / TILE);
+      const footColR = Math.floor((j.x + j.w - 6) / TILE);
+      const footRow = Math.floor((j.y + j.h - 2) / TILE);
+      // Only drown if NOT supported by a submerged block!
+      if (!j.onGround && footRow >= 0 && footRow < ROWS) {
+        const hitWaterL = isWaterTile(footColL, footRow) && !findBlockAtRowCol(footColL, footRow);
+        const hitWaterR = isWaterTile(footColR, footRow) && !findBlockAtRowCol(footColR, footRow);
+        if (hitWaterL && hitWaterR) {
+          j.drowned = true;
+          audio.playSplash();
+          spawnParticles(j.x + j.w / 2, footRow * TILE + 8, C64.CYAN, 18, 130);
+          killJack('JACK DROWNED!');
+        }
+      }
+
+      if (j.y > ROWS * TILE) {
+        killJack('FELL OUT!');
+      }
+    }
+
+    function markBarrier(c, r) {
+      if (state.barLit[r][c]) return;
+      state.barLit[r][c] = true;
+      state.litBars++;
+      audio.playBarLit(state.litBars);
+      addScore(25, c * TILE + 16, HUD_H + r * TILE, '+25', C64.CYAN);
+      spawnParticles(c * TILE + 16, HUD_H + r * TILE + 8, state.palette.barLit, 6, 70);
+
+      if (state.litBars >= state.totalBars && !state.barBonusAwarded && state.totalBars > 0) {
+        state.barBonusAwarded = true;
+        audio.playAllBars();
+        addScore(state.barBonus, CANVAS_W / 2, HUD_H + 88, `ALL BARS +${state.barBonus}!`, C64.YELLOW);
+      }
+    }
+
+    // =========================================================================
+    // 9. MONSTER AI & COMBAT
+    // =========================================================================
+    function updateMonsters(dt) {
+      const cycle = Math.floor((state.levelNum - 1) / BASE_LEVELS.length);
+      // Escalating aggression the longer Jack spends in the level (authentic C64!)
+      const anger = 1 + Math.min(1.15, state.levelElapsed / 75) + cycle * 0.16;
+      const solids = getSolidRects(true); // Monsters float safely on water!
+      const j = state.jack;
+
+      for (const m of state.monsters) {
+        if (!m.alive) continue;
+        m.anim += dt * (6 * anger);
+
+        // Gravity
+        m.vy = Math.min(460, m.vy + 940 * dt);
+
+        // Horizontal movement
+        const desiredSpeed = (58 + cycle * 11) * anger;
+        m.vx = m.dir * desiredSpeed;
+        m.x += m.vx * dt;
+
+        if (m.x < 1) { m.x = 1; m.dir = 1; }
+        if (m.x + m.w > CANVAS_W - 1) { m.x = CANVAS_W - 1 - m.w; m.dir = -1; }
+
+        for (const s of solids) {
+          if (rectOverlap(m.x, m.y, m.w, m.h, s.x, s.y, s.w, s.h)) {
+            if (m.dir > 0) m.x = s.x - m.w;
+            else m.x = s.x + s.w;
+            m.dir *= -1;
+          }
+        }
+
+        // Vertical movement
+        m.y += m.vy * dt;
+        let onSurface = false;
+
+        if (m.y < 1) { m.y = 1; m.vy = Math.abs(m.vy) * 0.3; }
+
+        for (const s of solids) {
+          if (rectOverlap(m.x, m.y, m.w, m.h, s.x, s.y, s.w, s.h)) {
+            if (m.vy > 0) {
+              m.y = s.y - m.h;
+              m.vy = 0;
+              onSurface = true;
+            } else if (m.vy < 0) {
+              m.y = s.y + s.h;
+              m.vy = 0;
+            }
+          }
+        }
+
+        // Unpredictable hopping & direction shifts (accelerates with anger!)
+        m.hopCooldown -= dt * anger;
+        if (onSurface && m.hopCooldown <= 0) {
+          const hopStrength = 250 + Math.random() * 235; // hops arbitrarily low or high
+          m.vy = -hopStrength;
+          m.hopCooldown = 0.25 + Math.random() * 0.85;
+          // Occasionally shift direction, with slight bias toward Jack when angry
+          if (Math.random() < 0.25 + Math.min(0.35, state.levelElapsed / 140)) {
+            if (j.alive && Math.random() < 0.65) {
+              m.dir = (j.x > m.x) ? 1 : -1;
+            } else {
+              m.dir *= -1;
+            }
+          }
+        }
+
+        // Combat check against Jack
+        if (j.alive && rectOverlap(j.x + 2, j.y + 2, j.w - 4, j.h - 4, m.x + 2, m.y + 2, m.w - 4, m.h - 4)) {
+          // Jack STOMPS monster if falling onto monster's upper body!
+          const jackFeet = j.y + j.h;
+          const monMid = m.y + m.h * 0.58;
+          if (j.vy > 20 && jackFeet <= monMid + 8) {
+            j.stompCombo++;
+            const pts = 150 * Math.min(4, j.stompCombo);
+            killMonster(m, j.stompCombo > 1 ? `STOMP x${j.stompCombo}!` : 'STOMP!', pts, true);
+            j.vy = input.jump ? -390 : -290;
+            j.squash = 0.8;
+          } else {
+            // Monster hits/lands on Jack!
+            killJack('CAUGHT BY MONSTER!');
+          }
+        }
+      }
+    }
+
+    function killMonster(m, label, pts, isStomp = false) {
+      if (!m.alive) return;
+      m.alive = false;
+      if (isStomp) audio.playStomp(state.jack.stompCombo);
+      else audio.playSquish();
+      state.shakeTimer = Math.max(state.shakeTimer, 0.11);
+      addScore(pts, m.x + m.w / 2, HUD_H + m.y, `${label} +${pts}`, C64.YELLOW);
+      spawnParticles(m.x + m.w / 2, HUD_H + m.y + m.h / 2, state.palette.mon, 14, 150);
+      spawnParticles(m.x + m.w / 2, HUD_H + m.y + m.h / 2, state.palette.monHi, 8, 100);
+    }
+
+    function killJack(reason) {
+      const j = state.jack;
+      if (!j.alive) return;
+      j.alive = false;
+      state.screen = 'PLAYER_DEAD';
+      state.stateTimer = 1.75;
+      state.shakeTimer = 0.22;
+      if (!j.drowned) audio.playDeath();
+      spawnPopup(CANVAS_W / 2, HUD_H + 130, reason, C64.JACK_RED, 1.6);
+      spawnParticles(j.x + j.w / 2, HUD_H + j.y + j.h / 2, C64.JACK_RED, 20, 160);
+    }
+
+    function dissolveBarriers() {
+      state.barsDissolved = true;
+      audio.playBarsDissolve();
+      spawnPopup(CANVAS_W / 2, HUD_H + 96, 'BARRIERS DISSOLVED!', C64.ORANGE, 1.4);
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (state.grid[r][c] === TILE_BARRIER) {
+            state.grid[r][c] = TILE_EMPTY;
+            spawnParticles(c * TILE + 16, HUD_H + r * TILE + 12, state.palette.bar, 5, 75);
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // 10. MAIN UPDATE LOOP
+    // =========================================================================
+    function update(dt) {
+      state.tickAnim += dt;
+      if (state.shakeTimer > 0) state.shakeTimer = Math.max(0, state.shakeTimer - dt);
+
+      // Update particles & popups in all active states
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 320 * dt;
+        p.life -= dt;
+        if (p.life <= 0) state.particles.splice(i, 1);
+      }
+      for (let i = state.popups.length - 1; i >= 0; i--) {
+        const pop = state.popups[i];
+        pop.y -= 26 * dt;
+        pop.life -= dt;
+        if (pop.life <= 0) state.popups.splice(i, 1);
+      }
+
+      if (state.paused) return;
+
+      if (state.screen === 'TITLE') {
+        return;
+      }
+
+      if (state.screen === 'INTRO') {
+        state.stateTimer -= dt;
+        if (state.stateTimer <= 0) {
+          state.screen = 'PLAYING';
+        }
+        return;
+      }
+
+      if (state.screen === 'PLAYING') {
+        state.levelElapsed += dt;
+
+        // Bonus countdown timer
+        if (state.bonusTimer > 0) {
+          const prevSec = Math.ceil(state.bonusTimer);
+          state.bonusTimer = Math.max(0, state.bonusTimer - dt);
+          const curSec = Math.ceil(state.bonusTimer);
+          if (curSec <= 5 && curSec > 0 && curSec !== prevSec && !state.barsDissolved && state.totalBars > 0) {
+            audio.playTick();
+          }
+          if (state.bonusTimer === 0 && !state.barsDissolved) {
+            dissolveBarriers();
+          }
+        }
+
+        updateBlocks(dt);
+        updateJack(dt);
+        updateMonsters(dt);
+
+        // Check victory condition: all monsters defeated!
+        const remaining = state.monsters.filter(m => m.alive).length;
+        if (remaining === 0 && state.jack.alive) {
+          const timeBonus = Math.floor(state.bonusTimer) * 20;
+          if (timeBonus > 0) {
+            addScore(timeBonus, CANVAS_W / 2, HUD_H + 140, `TIME BONUS +${timeBonus}`, C64.LGREEN);
+          }
+          saveData.cleared[state.levelNum] = true;
+          persistSave();
+          audio.playLevelClear();
+          state.screen = 'LEVEL_CLEAR';
+          state.stateTimer = 2.3;
+        }
+        return;
+      }
+
+      if (state.screen === 'LEVEL_CLEAR') {
+        state.stateTimer -= dt;
+        if (state.stateTimer <= 0) {
+          const p = currentPlayer();
+          if (p.level >= 64) {
+            state.screen = 'VICTORY';
+          } else {
+            p.level++;
+            loadLevel(p.level);
+          }
+        }
+        return;
+      }
+
+      if (state.screen === 'PLAYER_DEAD') {
+        state.stateTimer -= dt;
+        if (state.stateTimer <= 0) {
+          const p = currentPlayer();
+          p.lives--;
+          if (state.twoPlayer) {
+            const other = 1 - state.activePlayer;
+            if (state.players[other].lives > 0) {
+              state.activePlayer = other;
+            }
+          }
+          if (currentPlayer().lives <= 0) {
+            state.screen = 'GAME_OVER';
+          } else {
+            loadLevel(currentPlayer().level);
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // 11. RETRO COMMODORE 64 PIXEL-ART RENDERER
+    // =========================================================================
+    function drawText(text, x, y, size = 12, color = C64.WHITE, align = 'left') {
+      ctx.font = `900 ${size}px ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace`;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'top';
+      // Crisp 1px C64 drop shadow
+      ctx.fillStyle = '#000';
+      ctx.fillText(text, Math.round(x) + 1, Math.round(y) + 1);
+      ctx.fillStyle = color;
+      ctx.fillText(text, Math.round(x), Math.round(y));
+    }
+
+    function drawHUD() {
+      // Classic C64 header bar
+      ctx.fillStyle = '#0b0c18';
+      ctx.fillRect(0, 0, CANVAS_W, HUD_H);
+      ctx.fillStyle = '#2d3154';
+      ctx.fillRect(0, HUD_H - 2, CANVAS_W, 2);
+
+      const p = currentPlayer();
+      const pLabel = state.twoPlayer ? `P${state.activePlayer + 1}` : '1UP';
+
+      drawText(pLabel, 10, 6, 11, C64.JACK_RED);
+      drawText(String(p.score).padStart(6, '0'), 10, 22, 15, C64.WHITE);
+
+      drawText('HI-SCORE', 112, 6, 11, C64.CYAN);
+      drawText(String(saveData.highScore).padStart(6, '0'), 112, 22, 15, C64.YELLOW);
+
+      drawText('LVL', 218, 6, 11, C64.LGREEN);
+      drawText(String(state.levelNum).padStart(2, '0'), 218, 22, 15, C64.WHITE);
+
+      // Bonus Timer Bar
+      const timerRatio = state.maxBonusTimer > 0 ? state.bonusTimer / state.maxBonusTimer : 0;
+      const warnFlash = state.bonusTimer > 0 && state.bonusTimer <= 6 && Math.floor(state.tickAnim * 10) % 2 === 0;
+      drawText('BONUS', 262, 6, 11, warnFlash ? C64.JACK_RED : C64.ORANGE);
+      ctx.fillStyle = '#1b1d30';
+      ctx.fillRect(262, 24, 96, 12);
+      ctx.fillStyle = warnFlash ? C64.JACK_RED : (timerRatio > 0.35 ? C64.GREEN : C64.ORANGE);
+      ctx.fillRect(264, 26, Math.round(92 * timerRatio), 8);
+      drawText(String(Math.ceil(state.bonusTimer)).padStart(2, '0'), 363, 22, 14, C64.WHITE);
+
+      // Remaining Monsters & Bars
+      const aliveMon = state.monsters.filter(m => m.alive).length;
+      drawText(`FOES:${aliveMon}`, 398, 6, 11, state.palette.monHi);
+      drawText(`BAR:${state.litBars}/${state.totalBars}`, 398, 24, 11, state.barBonusAwarded ? C64.YELLOW : C64.CYAN);
+
+      // Mini Jack Lives icons on far right
+      const livesToShow = Math.min(5, Math.max(0, p.lives));
+      for (let i = 0; i < livesToShow; i++) {
+        const lx = CANVAS_W - 14 - i * 13;
+        const ly = 26;
+        ctx.fillStyle = C64.JACK_RED;
+        ctx.fillRect(lx, ly, 10, 10);
+        ctx.fillStyle = C64.WHITE;
+        ctx.fillRect(lx + 2, ly + 2, 2, 2);
+        ctx.fillRect(lx + 6, ly + 2, 2, 2);
+      }
+      drawText('JACKS', CANVAS_W - 10, 6, 10, C64.LRED, 'right');
+    }
+
+    function drawTileFloor(c, r) {
+      const x = c * TILE;
+      const y = HUD_H + r * TILE;
+      const pal = state.palette;
+      ctx.fillStyle = pal.floor;
+      ctx.fillRect(x, y, TILE, TILE);
+      // Crisp C64 brick pattern
+      ctx.fillStyle = pal.floorHi;
+      ctx.fillRect(x, y, TILE, 3);
+      ctx.fillRect(x, y + 16, TILE, 2);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x, y + 14, TILE, 2);
+      ctx.fillRect(x, y + 30, TILE, 2);
+      ctx.fillRect(x + 15, y, 2, 15);
+      ctx.fillRect(x + 30, y + 15, 2, 16);
+    }
+
+    function drawTileWater(c, r) {
+      const x = c * TILE;
+      const y = HUD_H + r * TILE;
+      ctx.fillStyle = C64.CYAN_DARK;
+      ctx.fillRect(x, y + 4, TILE, TILE - 4);
+      // Animated turquoise C64 wave crests
+      const phase = Math.floor(state.tickAnim * 5 + c) % 4;
+      ctx.fillStyle = C64.CYAN;
+      for (let wx = 0; wx < TILE; wx += 8) {
+        const wy = y + 3 + (((wx / 8 + phase) % 2 === 0) ? 0 : 2);
+        ctx.fillRect(x + wx, wy, 6, 4);
+      }
+      ctx.fillStyle = '#a6f4fa';
+      ctx.fillRect(x + ((phase * 7) % 24), y + 14, 8, 2);
+      ctx.fillRect(x + (((phase + 2) * 7) % 24), y + 23, 6, 2);
+    }
+
+    function drawTileBarrier(c, r) {
+      const x = c * TILE;
+      const y = HUD_H + r * TILE;
+      const lit = state.barLit[r][c];
+      const pal = state.palette;
+      // Flash warning when < 5s left
+      const flashing = state.bonusTimer > 0 && state.bonusTimer <= 5 && Math.floor(state.tickAnim * 12) % 2 === 0;
+      const bodyCol = flashing ? C64.JACK_RED : (lit ? pal.barLit : pal.bar);
+
+      // Glowing halo when marked
+      if (lit) {
+        ctx.fillStyle = 'rgba(255, 250, 140, 0.22)';
+        ctx.fillRect(x, y - 2, TILE, 18);
+      }
+      // Solid bar platform beam
+      ctx.fillStyle = bodyCol;
+      ctx.fillRect(x, y + 2, TILE, 12);
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(x + 2, y + 4, TILE - 4, 3);
+      // Truss supports underneath
+      ctx.fillStyle = '#000';
+      for (let i = 4; i < TILE; i += 8) {
+        ctx.fillRect(x + i, y + 8, 4, 4);
+      }
+      ctx.fillStyle = lit ? C64.WHITE : '#383d5e';
+      ctx.fillRect(x, y + 14, TILE, 3);
+    }
+
+    function drawBlock(b) {
+      const x = Math.round(b.x);
+      const y = Math.round(HUD_H + b.y);
+      const pal = state.palette;
+
+      ctx.fillStyle = b.submerged ? '#4d7c85' : pal.block;
+      ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+
+      // 3D beveled C64 cube highlights
+      ctx.fillStyle = b.submerged ? C64.CYAN : pal.blockHi;
+      ctx.fillRect(x + 1, y + 1, TILE - 2, 4);
+      ctx.fillRect(x + 1, y + 1, 4, TILE - 2);
+
+      // Dark bottom/right bevel
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      ctx.fillRect(x + 1, y + TILE - 5, TILE - 2, 4);
+      ctx.fillRect(x + TILE - 5, y + 1, 4, TILE - 2);
+
+      // Inner C64 crate crosshatch rivet detail
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + 7, y + 7, TILE - 14, TILE - 14);
+      ctx.fillStyle = b.submerged ? '#356069' : pal.block;
+      ctx.fillRect(x + 9, y + 9, TILE - 18, TILE - 18);
+      ctx.fillStyle = b.submerged ? C64.CYAN : pal.blockHi;
+      ctx.fillRect(x + 11, y + 11, 4, 4);
+    }
+
+    function drawMonster(m) {
+      if (!m.alive) return;
+      const x = Math.round(m.x);
+      const y = Math.round(HUD_H + m.y);
+      const pal = state.palette;
+      const bounce = Math.sin(m.anim) * 1.5;
+
+      // Antennae / Horns
+      ctx.fillStyle = pal.monHi;
+      ctx.fillRect(x + 3, y - 2 + bounce, 4, 5);
+      ctx.fillRect(x + m.w - 7, y - 2 - bounce, 4, 5);
+
+      // Main cubic critter body
+      ctx.fillStyle = pal.mon;
+      ctx.fillRect(x + 2, y + 2, m.w - 4, m.h - 6);
+      ctx.fillRect(x, y + 5, m.w, m.h - 11);
+
+      // Top highlight
+      ctx.fillStyle = pal.monHi;
+      ctx.fillRect(x + 4, y + 3, m.w - 8, 3);
+
+      // Expressive mischievous eyes
+      const eyeShift = m.dir > 0 ? 2 : -1;
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(x + 5, y + 8, 6, 6);
+      ctx.fillRect(x + m.w - 11, y + 8, 6, 6);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + 7 + eyeShift, y + 10, 3, 3);
+      ctx.fillRect(x + m.w - 9 + eyeShift, y + 10, 3, 3);
+
+      // Chomp mouth
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + 6, y + 16, m.w - 12, 4);
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(x + 8, y + 16, 3, 2);
+      ctx.fillRect(x + m.w - 11, y + 16, 3, 2);
+
+      // Animated scurrying feet
+      const step = Math.floor(m.anim) % 2 === 0 ? 0 : 3;
+      ctx.fillStyle = pal.monHi;
+      ctx.fillRect(x + 4 + step, y + m.h - 4, 6, 4);
+      ctx.fillRect(x + m.w - 10 - step, y + m.h - 4, 6, 4);
+    }
+
+    function drawJack() {
+      const j = state.jack;
+      if (!j || !j.alive) return;
+      const x = Math.round(j.x);
+      const y = Math.round(HUD_H + j.y);
+
+      const sqX = Math.round(j.squash * 3);
+      const sqY = Math.round(j.squash * 3);
+      const rx = x - sqX;
+      const ry = y + sqY;
+      const rw = j.w + sqX * 2;
+      const rh = j.h - sqY;
+
+      // Iconic round-ish RED Jack Tramiel head-critter!
+      ctx.fillStyle = C64.JACK_DARK;
+      ctx.fillRect(rx + 2, ry + 2, rw - 4, rh - 6);
+      ctx.fillStyle = C64.JACK_RED;
+      ctx.fillRect(rx + 3, ry, rw - 6, rh - 7);
+      ctx.fillRect(rx, ry + 3, rw, rh - 11);
+
+      // Glossy forehead highlight
+      ctx.fillStyle = C64.JACK_HI;
+      ctx.fillRect(rx + 5, ry + 2, rw - 10, 3);
+
+      // Eyes looking toward facing direction
+      const look = j.facing > 0 ? 2 : 0;
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(rx + 4, ry + 7, 6, 6);
+      ctx.fillRect(rx + rw - 10, ry + 7, 6, 6);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(rx + 5 + look, ry + 9, 3, 3);
+      ctx.fillRect(rx + rw - 9 + look, ry + 9, 3, 3);
+
+      // Determined brows (extra fierce when grabbing/pushing!)
+      ctx.fillStyle = '#000';
+      if (j.grabbing) {
+        ctx.fillRect(rx + 4, ry + 5, 6, 2);
+        ctx.fillRect(rx + rw - 10, ry + 5, 6, 2);
+      }
+
+      // Cheeky grin / shouting mouth ("Jack Attack!")
+      ctx.fillStyle = '#000';
+      ctx.fillRect(rx + 7, ry + 15, rw - 14, j.grabbing ? 4 : 3);
+      if (j.grabbing) {
+        ctx.fillStyle = C64.WHITE;
+        ctx.fillRect(rx + 9, ry + 15, rw - 18, 2);
+      }
+
+      // Little grabbing hands when holding GRAB
+      if (j.grabbing) {
+        ctx.fillStyle = C64.YELLOW;
+        ctx.fillRect(rx - 3, ry + 11, 4, 5);
+        ctx.fillRect(rx + rw - 1, ry + 11, 4, 5);
+      }
+
+      // Animated stomping boots!
+      const stride = j.onGround && Math.abs(j.vx) > 15 ? Math.round(Math.sin(j.walkAnim) * 3) : 0;
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(rx + 3 + stride, ry + rh - 5, 7, 5);
+      ctx.fillRect(rx + rw - 10 - stride, ry + rh - 5, 7, 5);
+    }
+
+    function drawTitleScreen() {
+      ctx.fillStyle = C64.BLACK;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Classic Commodore 64 border stripe accent
+      const stripeColors = [C64.JACK_RED, C64.ORANGE, C64.YELLOW, C64.GREEN, C64.CYAN];
+      stripeColors.forEach((col, i) => {
+        ctx.fillStyle = col;
+        ctx.fillRect(28, 26 + i * 4, CANVAS_W - 56, 3);
+        ctx.fillRect(28, CANVAS_H - 46 + i * 4, CANVAS_W - 56, 3);
+      });
+
+      // Big Retro Title
+      drawText('JACK ATTACK', CANVAS_W / 2, 66, 44, C64.JACK_RED, 'center');
+      drawText('JACK ATTACK', CANVAS_W / 2 - 2, 64, 44, C64.YELLOW, 'center');
+      drawText('COMMODORE 64 EDITION (1983 TRIBUTE)', CANVAS_W / 2, 118, 12, C64.CYAN, 'center');
+
+      // Animated mini scene in middle of title screen!
+      const t = state.tickAnim;
+      const demoX = 120 + Math.sin(t * 2.1) * 55;
+      const demoBounce = Math.abs(Math.sin(t * 6.5)) * 22;
+
+      // Mini platform & block
+      ctx.fillStyle = C64.BLUE;
+      ctx.fillRect(88, 212, 336, 16);
+      ctx.fillStyle = C64.ORANGE;
+      ctx.fillRect(236, 180, 32, 32);
+      ctx.fillStyle = C64.YELLOW;
+      ctx.fillRect(236, 180, 32, 4);
+
+      // Animated Jack hopping
+      const jx = Math.round(demoX);
+      const jy = Math.round(182 - demoBounce);
+      ctx.fillStyle = C64.JACK_RED;
+      ctx.fillRect(jx, jy, 26, 24);
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(jx + 4, jy + 5, 6, 6);
+      ctx.fillRect(jx + 16, jy + 5, 6, 6);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(jx + 6, jy + 7, 3, 3);
+      ctx.fillRect(jx + 18, jy + 7, 3, 3);
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(jx + 3, jy + 24, 7, 4);
+      ctx.fillRect(jx + 16, jy + 24, 7, 4);
+
+      // Animated Monster on right
+      const mx = Math.round(320 + Math.cos(t * 2.6) * 45);
+      const my = Math.round(184 - Math.abs(Math.cos(t * 5.2)) * 18);
+      ctx.fillStyle = C64.PURPLE;
+      ctx.fillRect(mx, my, 26, 24);
+      ctx.fillStyle = C64.WHITE;
+      ctx.fillRect(mx + 4, my + 6, 6, 6);
+      ctx.fillRect(mx + 16, my + 6, 6, 6);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(mx + 5, my + 8, 3, 3);
+      ctx.fillRect(mx + 17, my + 8, 3, 3);
+
+      // Quick instructions
+      drawText('STOMP MONSTERS, SQUISH THEM WITH BLOCKS,', CANVAS_W / 2, 244, 12, C64.LGREY, 'center');
+      drawText('OR DROP BLOCKS ON THEIR HEADS!', CANVAS_W / 2, 262, 12, C64.LGREY, 'center');
+
+      drawText(`HIGH SCORE: ${String(saveData.highScore).padStart(6, '0')}   MODE: ${state.twoPlayer ? '2 PLAYERS' : '1 PLAYER'}`, CANVAS_W / 2, 290, 13, C64.LGREEN, 'center');
+
+      if (Math.floor(t * 2.5) % 2 === 0) {
+        drawText('PRESS JUMP / SPACE / TAP SCREEN TO PLAY', CANVAS_W / 2, 322, 14, C64.WHITE, 'center');
+      }
+    }
+
+    function render() {
+      if (state.screen === 'TITLE') {
+        drawTitleScreen();
+        return;
+      }
+
+      ctx.save();
+      if (state.shakeTimer > 0) {
+        const sx = (Math.random() - 0.5) * 6;
+        const sy = (Math.random() - 0.5) * 6;
+        ctx.translate(Math.round(sx), Math.round(sy));
+      }
+
+      // Pitch-black authentic C64 playfield background
+      ctx.fillStyle = C64.BLACK;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      drawHUD();
+
+      // Draw grid tiles (Floor, Water, Barriers)
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = state.grid[r][c];
+          if (t === TILE_FLOOR) drawTileFloor(c, r);
+          else if (t === TILE_WATER) drawTileWater(c, r);
+          else if (t === TILE_BARRIER) drawTileBarrier(c, r);
+        }
+      }
+
+      // Draw movable blocks
+      for (const b of state.blocks) drawBlock(b);
+
+      // Draw monsters & Jack
+      for (const m of state.monsters) drawMonster(m);
+      drawJack();
+
+      // Particles
+      for (const p of state.particles) {
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+
+      // Floating score popups
+      for (const pop of state.popups) {
+        ctx.globalAlpha = Math.min(1, pop.life * 2);
+        drawText(pop.text, pop.x, pop.y, 12, pop.color, 'center');
+      }
+      ctx.globalAlpha = 1;
+
+      // Level Intro Banner
+      if (state.screen === 'INTRO') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.76)';
+        ctx.fillRect(48, HUD_H + 106, CANVAS_W - 96, 118);
+        ctx.strokeStyle = C64.CYAN;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(48, HUD_H + 106, CANVAS_W - 96, 118);
+
+        const pTag = state.twoPlayer ? `PLAYER ${state.activePlayer + 1} - ` : '';
+        drawText(`${pTag}LEVEL ${String(state.levelNum).padStart(2, '0')}`, CANVAS_W / 2, HUD_H + 120, 20, C64.YELLOW, 'center');
+        drawText(state.levelName, CANVAS_W / 2, HUD_H + 148, 13, C64.WHITE, 'center');
+        drawText(`BAR BONUS: ${state.barBonus} PTS`, CANVAS_W / 2, HUD_H + 170, 12, C64.LGREEN, 'center');
+        if (state.hasWater) {
+          drawText("BEWARE: MONSTERS FLOAT BUT YOU DON'T!", CANVAS_W / 2, HUD_H + 194, 11, C64.CYAN, 'center');
+        } else if (state.levelNum === 1) {
+          drawText('HOLD GRAB + LEFT/RIGHT TO PUSH & PULL BLOCKS', CANVAS_W / 2, HUD_H + 194, 11, C64.ORANGE, 'center');
+        }
+      }
+
+      // Level Clear Banner
+      if (state.screen === 'LEVEL_CLEAR') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+        ctx.fillRect(72, HUD_H + 124, CANVAS_W - 144, 78);
+        ctx.strokeStyle = C64.LGREEN;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(72, HUD_H + 124, CANVAS_W - 144, 78);
+        drawText(`LEVEL ${String(state.levelNum).padStart(2, '0')} CLEARED!`, CANVAS_W / 2, HUD_H + 140, 20, C64.LGREEN, 'center');
+        drawText('GET READY FOR NEXT ARENA...', CANVAS_W / 2, HUD_H + 172, 12, C64.WHITE, 'center');
+      }
+
+      // Pause Overlay
+      if (state.paused && state.screen === 'PLAYING') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fillRect(0, HUD_H, CANVAS_W, CANVAS_H - HUD_H);
+        drawText('PAUSED', CANVAS_W / 2, HUD_H + 145, 28, C64.YELLOW, 'center');
+        drawText('PRESS P OR PAUSE TO RESUME', CANVAS_W / 2, HUD_H + 184, 12, C64.CYAN, 'center');
+      }
+
+      // Game Over Overlay
+      if (state.screen === 'GAME_OVER') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
+        ctx.fillRect(54, HUD_H + 92, CANVAS_W - 108, 146);
+        ctx.strokeStyle = C64.JACK_RED;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(54, HUD_H + 92, CANVAS_W - 108, 146);
+        drawText('GAME OVER', CANVAS_W / 2, HUD_H + 110, 28, C64.JACK_RED, 'center');
+        drawText(`FINAL SCORE: ${currentPlayer().score}`, CANVAS_W / 2, HUD_H + 150, 15, C64.YELLOW, 'center');
+        drawText(`REACHED LEVEL ${String(state.levelNum).padStart(2, '0')}`, CANVAS_W / 2, HUD_H + 174, 13, C64.CYAN, 'center');
+        drawText('PRESS JUMP / SPACE / TAP TO PLAY AGAIN', CANVAS_W / 2, HUD_H + 206, 12, C64.WHITE, 'center');
+      }
+
+      // All 64 Levels Conquered Victory Screen!
+      if (state.screen === 'VICTORY') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.86)';
+        ctx.fillRect(36, HUD_H + 74, CANVAS_W - 72, 180);
+        ctx.strokeStyle = C64.YELLOW;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(36, HUD_H + 74, CANVAS_W - 72, 180);
+        drawText('CONGRATULATIONS!', CANVAS_W / 2, HUD_H + 92, 24, C64.YELLOW, 'center');
+        drawText('YOU CONQUERED ALL 64 LEVELS', CANVAS_W / 2, HUD_H + 128, 14, C64.LGREEN, 'center');
+        drawText('OF JACK ATTACK!', CANVAS_W / 2, HUD_H + 148, 14, C64.CYAN, 'center');
+        drawText(`CHAMPION SCORE: ${currentPlayer().score}`, CANVAS_W / 2, HUD_H + 180, 16, C64.WHITE, 'center');
+        drawText('PRESS JUMP / SPACE TO PLAY AGAIN', CANVAS_W / 2, HUD_H + 216, 12, C64.ORANGE, 'center');
+      }
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 12. KEYBOARD, TOUCH, GAMEPAD & UI CONTROLS
+    // =========================================================================
+    function handleActionConfirm() {
+      if (state.screen === 'TITLE') {
+        startNewGame(state.selectedStartLevel);
+        return true;
+      }
+      if (state.screen === 'GAME_OVER' || state.screen === 'VICTORY') {
+        startNewGame(1);
+        return true;
+      }
+      return false;
+    }
+
+    window.addEventListener('keydown', (e) => {
+      const code = e.code;
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(code)) {
+        e.preventDefault();
+      }
+      audio.unlock();
+
+      if (code === 'ArrowLeft' || code === 'KeyA') input.left = true;
+      if (code === 'ArrowRight' || code === 'KeyD') input.right = true;
+      if (code === 'ArrowUp' || code === 'KeyW' || code === 'KeyX') {
+        if (!input.jump) input.jumpPressedAt = performance.now();
+        input.jump = true;
+        handleActionConfirm();
+      }
+      if (code === 'Space' || code === 'ShiftLeft' || code === 'ShiftRight' || code === 'KeyZ' || code === 'KeyC') {
+        input.grab = true;
+        if (code === 'Space') handleActionConfirm();
+      }
+      if (code === 'Enter') handleActionConfirm();
+      if (code === 'KeyP') togglePause();
+      if (code === 'KeyR' && (state.screen === 'PLAYING' || state.screen === 'INTRO')) {
+        loadLevel(state.levelNum);
+      }
+      if (code === 'KeyM') toggleSound();
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const code = e.code;
+      if (code === 'ArrowLeft' || code === 'KeyA') input.left = false;
+      if (code === 'ArrowRight' || code === 'KeyD') input.right = false;
+      if (code === 'ArrowUp' || code === 'KeyW' || code === 'KeyX') input.jump = false;
+      if (code === 'Space' || code === 'ShiftLeft' || code === 'ShiftRight' || code === 'KeyZ' || code === 'KeyC') {
+        input.grab = false;
+      }
+    });
+
+    // Tap directly on canvas to start on Title / Game Over
+    canvas.addEventListener('pointerdown', () => {
+      audio.unlock();
+      handleActionConfirm();
+    });
+
+    // Multi-touch safe Arcade Pad bindings
+    const activeTouches = new Map();
+    function recomputeTouchInputs() {
+      const keys = { left: false, right: false, jump: false, grab: false };
+      for (const k of activeTouches.values()) keys[k] = true;
+      if (keys.jump && !input.jump) input.jumpPressedAt = performance.now();
+      input.left = keys.left;
+      input.right = keys.right;
+      input.jump = keys.jump;
+      input.grab = keys.grab;
+      document.querySelectorAll('.pad-btn[data-key]').forEach(btn => {
+        btn.classList.toggle('pressed', !!keys[btn.dataset.key]);
+      });
+    }
+
+    document.querySelectorAll('.pad-btn[data-key]').forEach(btn => {
+      const key = btn.dataset.key;
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        audio.unlock();
+        if (key === 'jump' || key === 'grab') {
+          if (handleActionConfirm()) return;
+        }
+        activeTouches.set(e.pointerId, key);
+        recomputeTouchInputs();
+      });
+      const release = (e) => {
+        if (activeTouches.has(e.pointerId)) {
+          activeTouches.delete(e.pointerId);
+          recomputeTouchInputs();
+        }
+      };
+      btn.addEventListener('pointerup', release);
+      btn.addEventListener('pointercancel', release);
+      btn.addEventListener('pointerleave', release);
+    });
+
+    // Optional Bluetooth / USB Gamepad polling
+    function pollGamepad() {
+      if (!navigator.getGamepads) return;
+      const pads = navigator.getGamepads();
+      const gp = pads && pads[0];
+      if (!gp) return;
+      const ax = gp.axes[0] || 0;
+      const gLeft = ax < -0.35 || (gp.buttons[14] && gp.buttons[14].pressed);
+      const gRight = ax > 0.35 || (gp.buttons[15] && gp.buttons[15].pressed);
+      const gJump = (gp.buttons[0] && gp.buttons[0].pressed) || (gp.buttons[12] && gp.buttons[12].pressed);
+      const gGrab = (gp.buttons[1] && gp.buttons[1].pressed) || (gp.buttons[2] && gp.buttons[2].pressed);
+      if (gJump && !input.jump) {
+        input.jumpPressedAt = performance.now();
+        handleActionConfirm();
+      }
+      if (gLeft || gRight || gJump || gGrab) {
+        input.left = gLeft;
+        input.right = gRight;
+        input.jump = gJump;
+        input.grab = gGrab;
+      }
+    }
+
+    // Toolbar UI bindings
+    const levelOverlay = document.getElementById('levelOverlay');
+    const helpOverlay = document.getElementById('helpOverlay');
+    const levelGrid = document.getElementById('levelGrid');
+    const touchPad = document.getElementById('touchPad');
+    const kbdHint = document.getElementById('kbdHint');
+    const crtOverlay = document.getElementById('crtOverlay');
+
+    function buildLevelGrid() {
+      levelGrid.innerHTML = '';
+      for (let i = 1; i <= 64; i++) {
+        const b = document.createElement('button');
+        b.className = 'lvl-cell';
+        if (saveData.cleared[i]) b.classList.add('cleared');
+        if (i === state.levelNum && state.screen !== 'TITLE') b.classList.add('current');
+        b.textContent = String(i).padStart(2, '0');
+        b.addEventListener('click', () => {
+          levelOverlay.classList.remove('show');
+          state.selectedStartLevel = i;
+          startNewGame(i);
+        });
+        levelGrid.appendChild(b);
+      }
+    }
+
+    function openLevels() {
+      helpOverlay.classList.remove('show');
+      buildLevelGrid();
+      levelOverlay.classList.add('show');
+      state.paused = true;
+    }
+
+    function togglePause() {
+      if (state.screen !== 'PLAYING') return;
+      state.paused = !state.paused;
+      document.getElementById('btnPause').classList.toggle('active', state.paused);
+    }
+
+    function toggleSound() {
+      audio.enabled = !audio.enabled;
+      const btn = document.getElementById('btnSound');
+      btn.textContent = audio.enabled ? 'SFX ON' : 'SFX OFF';
+      btn.classList.toggle('active', audio.enabled);
+    }
+
+    document.getElementById('btnMode').addEventListener('click', () => {
+      state.twoPlayer = !state.twoPlayer;
+      const btn = document.getElementById('btnMode');
+      btn.textContent = state.twoPlayer ? '2P' : '1P';
+      btn.classList.toggle('active', state.twoPlayer);
+    });
+    document.getElementById('btnLevels').addEventListener('click', openLevels);
+    document.getElementById('btnCloseLevels').addEventListener('click', () => {
+      levelOverlay.classList.remove('show');
+      state.paused = false;
+    });
+    document.getElementById('btnHelp').addEventListener('click', () => {
+      levelOverlay.classList.remove('show');
+      helpOverlay.classList.toggle('show');
+      state.paused = helpOverlay.classList.contains('show');
+    });
+    document.getElementById('btnCloseHelp').addEventListener('click', () => {
+      helpOverlay.classList.remove('show');
+      state.paused = false;
+    });
+    document.getElementById('btnRestart').addEventListener('click', () => {
+      if (state.screen === 'TITLE') startNewGame(1);
+      else loadLevel(state.levelNum);
+    });
+    document.getElementById('btnPause').addEventListener('click', togglePause);
+    document.getElementById('btnSound').addEventListener('click', toggleSound);
+    document.getElementById('btnCRT').addEventListener('click', (e) => {
+      crtOverlay.classList.toggle('off');
+      e.target.classList.toggle('active', !crtOverlay.classList.contains('off'));
+    });
+
+    function setTouchPadVisible(show) {
+      touchPad.classList.toggle('visible', show);
+      kbdHint.style.display = show ? 'none' : 'flex';
+      document.getElementById('btnPad').classList.toggle('active', show);
+    }
+
+    document.getElementById('btnPad').addEventListener('click', () => {
+      setTouchPadVisible(!touchPad.classList.contains('visible'));
+    });
+
+    // Landscape mini buttons
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const a = btn.dataset.action;
+        if (a === 'levels') openLevels();
+        else if (a === 'pause') togglePause();
+        else if (a === 'retry') loadLevel(state.levelNum);
+        else if (a === 'sound') toggleSound();
+      });
+    });
+
+    // Auto-enable touch pad on touch devices / mobile screens
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.innerWidth <= 768;
+    setTouchPadVisible(isTouchDevice);
+
+    // =========================================================================
+    // 13. MAIN ANIMATION LOOP
+    // =========================================================================
+    let lastTime = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+      lastTime = now;
+      pollGamepad();
+      update(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
